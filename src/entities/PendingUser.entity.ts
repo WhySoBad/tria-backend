@@ -1,9 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class PendingUser {
@@ -12,8 +7,7 @@ export class PendingUser {
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 
-  @Column({ type: 'timestamp' })
-  expires: Date = new Date(new Date().getTime() + 604800000);
+  @Column({ type: 'timestamp' }) expires: Date = new Date(new Date().getTime() + 604800000);
 
   @Column('text') name: string;
 

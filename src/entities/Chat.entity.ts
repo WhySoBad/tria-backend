@@ -1,16 +1,9 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  JoinTable,
-  ManyToMany,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, JoinTable, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { IChatType } from '../routes/Chat/Chat.interface';
+import { BannedMember } from './BannedMember.entity';
+import { ChatAdmin } from './ChatAdmin.entity';
 import { ChatMember } from './ChatMember.entity';
 import { Message } from './Message.entity';
-import { User } from './User.entity';
 
 @Entity()
 export class Chat {
@@ -24,15 +17,19 @@ export class Chat {
 
   @Column({ type: 'text', nullable: true }) description: string;
 
-  @ManyToMany(() => User, (user) => user.chats)
+  @OneToMany(() => ChatMember, (chatMember) => chatMember.chat)
   @JoinTable({ name: 'chat_member' })
-  members: Array<User>;
+  members: Array<ChatMember>;
 
   @OneToMany(() => Message, (message) => message.chat)
   @JoinColumn({ name: 'message' })
   messages: Array<Message>;
 
-  @ManyToMany(() => User)
+  @OneToMany(() => ChatAdmin, (chatAdmin) => chatAdmin.chat)
   @JoinTable({ name: 'chat_admin' })
-  admins: Array<User>;
+  admins: Array<ChatAdmin>;
+
+  @OneToMany(() => BannedMember, (bannedMember) => bannedMember.chat)
+  @JoinTable({ name: 'banned_member' })
+  banned: Array<BannedMember>;
 }

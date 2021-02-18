@@ -3,11 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   JoinTable,
-  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Chat } from './Chat.entity';
+import { ChatMember } from './ChatMember.entity';
 
 @Entity()
 export class User {
@@ -31,7 +31,7 @@ export class User {
 
   @Column('boolean', { default: false }) verified: boolean;
 
-  @ManyToMany(() => Chat)
+  @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   @JoinTable({ name: 'chat_member' })
   chats: Array<Chat>;
 }

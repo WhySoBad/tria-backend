@@ -7,22 +7,19 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { IChatRole } from '../routes/Chat/Chat.interface';
 import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 
 @Entity()
 @Index(['userUuid', 'chatUuid'], { unique: true })
-export class ChatMember {
+export class BannedMember {
   @PrimaryColumn({ type: 'uuid', name: 'userUuid' }) userUuid: string;
 
   @PrimaryColumn({ type: 'uuid', name: 'chatUuid' }) chatUuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) joinedAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) bannedAt: Date;
 
-  @Column({ type: 'int', default: IChatRole.MEMBER }) role: IChatRole;
-
-  @ManyToOne(() => User, (user) => user.chats, { onDelete: 'CASCADE' })
+@ManyToOne(() => User, (user) => user.chats, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userUuid' })
   user: User;
 

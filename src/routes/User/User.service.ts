@@ -1,13 +1,6 @@
-import {
-  BadRequestException,
-  HttpException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { async } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PendingUser } from '../../entities/PendingUser.entity';
 import { User } from '../../entities/User.entity';
@@ -22,48 +15,59 @@ export class UserService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(PendingUser)
     private pendingUserRepository: Repository<PendingUser>,
-    private authService: AuthService,
+    private authService: AuthService
   ) {}
 
   /**
-   *
-   * @param pending
+   * @param settings settings of  type IPendingUser
+   * @description function to register a new user
+   * @returns Promise<HandleService<void>>
+   * @introduced 15.02.2021
+   * @edited 18.02.2021
    */
 
-  async handleRegister(pending: IPendingUser): Promise<HandleService<void>> {
+  async handleRegister(settings: IPendingUser): Promise<HandleService<void>> {
     let user: PendingUser = new PendingUser();
-    const hashed: string = await AuthService.Hash(pending.password);
-    user.name = pending.name;
-    user.tag = pending.tag;
-    user.mail = pending.mail.replace(' ', '');
+    const hashed: string = await AuthService.Hash(settings.password);
+    user.name = settings.name;
+    user.tag = settings.tag;
+    user.mail = settings.mail.replace(' ', '');
     user.password = hashed;
-    user.description = pending.description;
-    user.avatar = pending.avatar;
-    user.locale = pending.locale;
+    user.description = settings.description;
+    user.avatar = settings.avatar;
+    user.locale = settings.locale;
 
-    if (await this.pendingUserRepository.findOne({ mail: user.mail })) {
-      return new BadRequestException('Mail Has To Be Unique');
-    } else if (await this.userRepository.findOne({ mail: user.mail })) {
-      return new BadRequestException('Mail Has To Be Unique');
-    } else if (await this.pendingUserRepository.findOne({ tag: user.tag })) {
-      return new BadRequestException('Tag Has To Be Unique');
-    } else if (await this.userRepository.findOne({ tag: user.tag })) {
-      return new BadRequestException('Tag Has To Be Unique');
+    const pendingExists = await this.pendingUserRepository
+      .createQueryBuilder()
+      .where('LOWER(mail) = LOWER(:mail)', { mail: user.mail })
+      .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
+      .getOne();
+
+    const userExists = await this.userRepository
+      .createQueryBuilder()
+      .where('LOWER(mail) = LOWER(:mail)', { mail: user.mail })
+      .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
+      .getOne();
+
+    if (pendingExists || userExists) {
+      return new BadRequestException('Mail And Tag Have To Be Unique');
     }
+
     await this.pendingUserRepository.save(user);
   }
 
   /**
-   *
-   * @param uuid
+   * @param uuid uuid of PendingUser to be verified
+   * @description function to verify an user
+   * @returns Promise<HandleService<void>>
+   * @introduced 15.02.2021
+   * @edited 15.02.2021
    */
 
   async handleVerify(uuid: string): Promise<HandleService<void>> {
-    const pending: DBResponse<PendingUser> = await this.pendingUserRepository.findOne(
-      {
-        uuid: uuid,
-      },
-    );
+    const pending: DBResponse<PendingUser> = await this.pendingUserRepository.findOne({
+      uuid: uuid,
+    });
     if (!pending) return new NotFoundException('User Not Found');
     let user = new User();
     user = { ...user, ...pending };
@@ -73,45 +77,51 @@ export class UserService {
   }
 
   /**
-   *
-   * @param changes
-   * @param token
+   * @param settings settings of type IUser
+   * @param token user auth token
+   * @description function to edit an user
+   * @returns Promise<HandleService<void>>
+   * @introduced 15.02.2021
+   * @edited 15.02.2021
    */
 
-  async handleEdit(
-    changes: IUser,
-    token: string,
-  ): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(
-      token,
-    );
+  async handleEdit(settings: IUser, token: string): Promise<HandleService<void>> {
+    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return payload;
     const user: DBResponse<User> = await this.userRepository.findOne({
       uuid: payload.user,
     });
     if (!user) return new NotFoundException('User Not Found');
-    if (changes.tag) {
-      if (await this.pendingUserRepository.findOne({ tag: changes.tag })) {
-        return new BadRequestException('Tag Has To Be Unique');
-      } else if (await this.userRepository.findOne({ tag: changes.tag })) {
+    if (settings.tag) {
+      const tagPending = await this.pendingUserRepository
+        .createQueryBuilder()
+        .where('LOWER(mail) = LOWER(:mail)', { mail: user.mail })
+        .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
+        .getOne();
+
+      const tagExists = await this.userRepository
+        .createQueryBuilder()
+        .where('LOWER(mail) = LOWER(:mail)', { mail: user.mail })
+        .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
+        .getOne();
+
+      if (tagExists || tagPending) {
         return new BadRequestException('Tag Has To Be Unique');
       }
     }
-    await this.userRepository.update(
-      { uuid: payload.user },
-      { ...user, ...changes },
-    );
+    await this.userRepository.update({ uuid: payload.user }, { ...user, ...settings });
   }
 
   /**
-   *
-   * @param token
+   * @param token user auth token
+   * @description function to delete an user
+   * @returns Promise<HandleService<void>>
+   * @introduced 15.02.2021
+   * @edited 15.02.2021
    */
 
   async handleDelete(token: string): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(
-      token,
-    );
+    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return payload;
     const user: DBResponse<User> = await this.userRepository.findOne({
       uuid: payload.user,
@@ -123,7 +133,7 @@ export class UserService {
   /**
    *
    * @param uuid user uuid
-   * @param token
+   * @param token user auth token
    * @description cron task firing every day at 00:00.00 to delete expired pending users
    * @returns Promise<HandleService<User>>
    * @introduced 15.02.2021
@@ -131,9 +141,7 @@ export class UserService {
    */
 
   async handleGet(uuid: string, token: string): Promise<HandleService<User>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(
-      token,
-    );
+    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return payload;
     const user: DBResponse<User> = await this.userRepository.findOne({
       uuid: uuid.toLowerCase(),

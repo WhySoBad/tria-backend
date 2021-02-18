@@ -27,6 +27,7 @@ export class UserController {
   /**
    * @param user request body of type IPendingUser
    * @description route to register new user
+   * @returns Promise<void>
    * @introduced 15.02.2021
    * @edited 17.02.2021
    */
@@ -47,15 +48,14 @@ export class UserController {
         throw new BadRequestException('Missing Arguments');
       }
     });
-    const registered: HandleService<void> = await this.userService.handleRegister(
-      settings,
-    );
+    const registered: HandleService<void> = await this.userService.handleRegister(settings);
     if (registered instanceof HttpException) throw registered;
   }
 
   /**
    * @param uuid uuid of PendingUser
    * @description route to verify a PendingUser
+   * @returns Promise<void>
    * @introduced 15.02.2021
    * @edited 17.02.2021
    */
@@ -63,11 +63,9 @@ export class UserController {
   @Get('verify/:uuid')
   async verify(
     @Param('uuid', new ParseUUIDPipe())
-    uuid: string,
+    uuid: string
   ): Promise<void> {
-    const verified: HandleService<void> = await this.userService.handleVerify(
-      uuid,
-    );
+    const verified: HandleService<void> = await this.userService.handleVerify(uuid);
     if (verified instanceof HttpException) throw verified;
   }
 
@@ -75,14 +73,14 @@ export class UserController {
    * @param user request body of type IUser
    * @param request request instance
    * @description route to edit an user
+   * @returns Promise<void>
    * @introduced 15.02.2021
    * @edited 17.02.2021
    */
 
   @Post('edit')
   async edit(@Body() user: IUser, @Request() request: Request): Promise<void> {
-    const headers: Headers = request.headers;
-    const token: string = headers['authorization' as keyof Headers]?.toString();
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
     if (!user) throw new BadRequestException('No Arguments Provided');
     const settings: IUser = {
@@ -95,28 +93,23 @@ export class UserController {
     Object.keys(settings).forEach((key: string) => {
       !settings[key as keyof IUser] && delete settings[key as keyof IUser];
     });
-    const edits: HandleService<void> = await this.userService.handleEdit(
-      settings,
-      token.replace('Bearer ', ''),
-    );
+    const edits: HandleService<void> = await this.userService.handleEdit(settings, token.substr(7));
     if (edits instanceof HttpException) throw edits;
   }
 
   /**
    * @param request request instance
    * @description route to delete an existing user
+   * @returns Promise<void>
    * @introduced 15.02.2021
    * @edited 17.02.2021
    */
 
   @Get('delete')
   async delete(@Request() request: Request): Promise<void> {
-    const headers: Headers = request.headers;
-    const token: string = headers['authorization' as keyof Headers]?.toString();
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    const deleted: HandleService<void> = await this.userService.handleDelete(
-      token.replace('Bearer ', ''),
-    );
+    const deleted: HandleService<void> = await this.userService.handleDelete(token.substr(7));
     if (deleted instanceof HttpException) throw deleted;
   }
 
@@ -124,6 +117,7 @@ export class UserController {
    * @param request request instance
    * @param uuid uuid of User
    * @description route to get an user by its uuid
+   * @returns Promise<IUser>
    * @introduced 15.02.2021
    * @edited 17.02.2021
    */
@@ -132,17 +126,15 @@ export class UserController {
   async get(
     @Request() request: Request,
     @Param('uuid', new ParseUUIDPipe())
-    uuid: string,
+    uuid: string
   ): Promise<IUser> {
-    const headers: Headers = request.headers;
-    const token: string = headers['authorization' as keyof Headers]?.toString();
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    const user: HandleService<User> = await this.userService.handleGet(
-      uuid,
-      token.replace('Bearer ', ''),
-    );
+    const user: HandleService<User> = await this.userService.handleGet(uuid, token.substr(7));
     if (user instanceof HttpException) throw user;
     return {
+      uuid: user.uuid,
+      createdAt: user.createdAt,
       name: user.name,
       tag: user.tag,
       description: user.description,

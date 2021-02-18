@@ -1,9 +1,4 @@
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  NestInterceptor,
-} from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -15,13 +10,8 @@ export class GlobalResponseInterceptor implements NestInterceptor {
       map((value) => {
         const hasValue: boolean = value != undefined && value != null;
         const data = hasValue ? { data: value } : {};
-        return {
-          // statusCode: 200,
-          //pathname: path,
-          ...{ ...data },
-          //timestamp: new Date().getTime(),
-        };
-      }),
+        return value;
+      })
     );
   }
 }

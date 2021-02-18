@@ -14,7 +14,9 @@ import { AuthService } from './Auth.service';
 import { v4 } from 'uuid';
 
 /**
- *
+ * @description auth route to validate tokens, start handshake, login and logout users
+ * @introduced 16.02.2021
+ * @edited 17.02.2021
  */
 
 @Controller('auth')
@@ -22,18 +24,18 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   /**
-   *
-   * @param request
+   * @param request request instance
+   * @description route to validate a JWT
+   * @returns Promise<void>
+   * @introduced 16.02.2021
+   * @edited 17.02.2021
    */
 
   @Get('validate')
   async validate(@Request() request: Request): Promise<boolean> {
-    const headers: Headers = request.headers;
-    const token: string = headers['authorization' as keyof Headers]?.toString();
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    const payload = await this.authService.handleVerify(
-      token.replace('Bearer ', ''),
-    );
+    const payload = await this.authService.handleVerify(token.substr(7));
     if (payload instanceof HttpException) throw payload;
     else return !!payload;
   }
@@ -46,8 +48,11 @@ export class AuthController {
   async handshake() {}
 
   /**
-   *
-   * @param login
+   * @param login request body of type ILogin
+   * @description route to login an user and generate a JWT
+   * @returns Promise<void>
+   * @introduced 16.02.2021
+   * @edited 17.02.2021
    */
 
   @Post('login')
@@ -64,15 +69,17 @@ export class AuthController {
   }
 
   /**
-   *
-   * @param request
+   * @param request request instance
+   * @description route to logout an user and blacklist the JWT
+   * @returns Promise<void>
+   * @introduced 16.02.2021
+   * @edited 17.02.2021
    */
 
   @Get('logout')
   async logout(@Request() request: Request): Promise<void> {
-    const headers: Headers = request.headers;
-    const token: string = headers['authorization' as keyof Headers]?.toString();
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    await this.authService.handleLogout(token.replace('Bearer ', ''));
+    await this.authService.handleLogout(token.substr(7));
   }
 }

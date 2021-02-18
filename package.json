@@ -1,7 +1,7 @@
 {
-  "name": "nest_typeorm_test",
-  "version": "1.0.0",
-  "description": "Nest combined with typeorm",
+  "name": "backend",
+  "version": "0.0.1",
+  "description": "backend messenger",
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
@@ -20,7 +20,7 @@
     "migration-generate": "npm run typeorm:cli -- migration:generate -n",
     "migration": "ts-node ./node_modules/typeorm/cli.js  migration:generate \"-n\" \"Migration\" \"-d\" \"src/migration\" --config \"src/ormconfig\" && node --require ts-node/register ./node_modules/typeorm/cli.js migration:run --config \"src/ormconfig\""
   },
-  "author": "WhySoBad",
+  "author": " ",
   "license": "MIT",
   "dependencies": {
     "@nestjs/common": "^7.5.1",
