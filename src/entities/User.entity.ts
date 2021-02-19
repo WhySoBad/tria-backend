@@ -6,6 +6,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { BannedMember } from './BannedMember.entity';
 import { Chat } from './Chat.entity';
 import { ChatMember } from './ChatMember.entity';
 
@@ -34,4 +35,8 @@ export class User {
   @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   @JoinTable({ name: 'chat_member' })
   chats: Array<Chat>;
+
+  @OneToMany(() => BannedMember, (bannedMember) => bannedMember.user)
+  @JoinTable({ name: 'banned_member' })
+  bannedChats: Array<Chat>;
 }

@@ -43,11 +43,11 @@ export class UserController {
       description: user.description,
       locale: user.locale,
     };
-    Object.keys(settings).forEach((key: string) => {
-      if (!settings[key as keyof IPendingUser]) {
+    for (const key in settings) {
+      if (settings[key as keyof IPendingUser] == null) {
         throw new BadRequestException('Missing Arguments');
       }
-    });
+    }
     const registered: HandleService<void> = await this.userService.handleRegister(settings);
     if (registered instanceof HttpException) throw registered;
   }
@@ -75,7 +75,7 @@ export class UserController {
    * @description route to edit an user
    * @returns Promise<void>
    * @introduced 15.02.2021
-   * @edited 17.02.2021
+   * @edited 19.02.2021
    */
 
   @Post('edit')
@@ -90,9 +90,9 @@ export class UserController {
       description: user.description,
       locale: user.locale,
     };
-    Object.keys(settings).forEach((key: string) => {
-      !settings[key as keyof IUser] && delete settings[key as keyof IUser];
-    });
+    for (const key in settings) {
+      settings[key as keyof IUser] == null && delete settings[key as keyof IUser];
+    }
     const edits: HandleService<void> = await this.userService.handleEdit(settings, token.substr(7));
     if (edits instanceof HttpException) throw edits;
   }

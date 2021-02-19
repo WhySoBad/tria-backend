@@ -9,19 +9,22 @@ import {
   Post,
   Request,
 } from '@nestjs/common';
+import { AdminPermission } from '../../entities/AdminPermission.entity';
+import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
-import { HandleService } from '../../util/Types.type';
+import { DBResponse, HandleService } from '../../util/Types.type';
 import {
-  IAdminPermissions,
+  IAdminPermission,
   IChat,
-  IChatAdmin,
+  IChatEdit,
   IChatRole,
   IChatType,
   IGroupChat,
   IPrivateChat,
+  IUserEdit,
 } from './Chat.interface';
 import { ChatService } from './Chat.service';
 
@@ -77,14 +80,15 @@ export class ChatController {
     const settings: IGroupChat = {
       name: chat.name,
       tag: chat.tag,
+      type: chat.type in IChatType ? chat.type : 'PRIVATE_GROUP',
       description: chat.description,
-      members: chat.members || [],
+      members: Array.isArray(chat.members) ? chat.members : [],
     };
-    Object.keys(settings).forEach((key: string) => {
-      if (!settings[key as keyof IGroupChat]) {
+    for (const key in settings) {
+      if (settings[key as keyof IGroupChat] == null) {
         throw new BadRequestException('Missing Arguments');
       }
-    });
+    }
     const created: HandleService<void> = await this.chatService.handleGroupCreate(
       settings,
       token.substr(7)
@@ -95,6 +99,7 @@ export class ChatController {
   /**
    * @param request request instance
    * @param uuid uuid of Chat
+   * @param chat request body of type IChatEdit
    * @description route to edit a chat
    * @returns Promise<void>
    * @introduced 18.02.2021
@@ -104,12 +109,26 @@ export class ChatController {
   @Post(':uuid/edit')
   async edit(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Body() chat: IChatEdit
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    await this.chatService.handleEdit();
+    const settings: IChatEdit = {
+      type: chat.type ? (chat.type in IChatType ? chat.type : undefined) : undefined,
+      tag: chat.tag,
+      name: chat.name,
+      description: chat.description,
+    };
+    for (const key in settings) {
+      settings[key as keyof IChatEdit] == null && delete settings[key as keyof IChatEdit];
+    }
+    const result: HandleService<void> = await this.chatService.handleEdit(
+      uuid,
+      chat,
+      token.substr(7)
+    );
+    if (result instanceof HttpException) throw result;
   }
 
   /**
@@ -124,8 +143,7 @@ export class ChatController {
   @Get(':uuid/join')
   async join(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
@@ -145,8 +163,7 @@ export class ChatController {
   @Get(':uuid/leave')
   async leave(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
@@ -166,8 +183,7 @@ export class ChatController {
   @Get(':uuid/delete')
   async delete(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
@@ -178,21 +194,53 @@ export class ChatController {
   /**
    * @param request request instance
    * @param uuid uuid of Chat
+   * @param user uuid of User to be banned
    * @description route to ban users from a chat
    * @returns Promise<void>
    * @introduced 18.02.2021
-   * @edited 18.02.2021
+   * @edited 19.02.2021
    */
 
   @Post(':uuid/admin/ban')
   async ban(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Body() user: { uuid: string }
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    await this.chatService.handleBan();
+    const result: HandleService<void> = await this.chatService.handleBan(
+      uuid,
+      user.uuid,
+      token.substr(7)
+    );
+    if (result instanceof HttpException) throw result;
+  }
+
+  /**
+   * @param request request instance
+   * @param uuid uuid of Chat
+   * @param user uuid of User to be unbanned
+   * @description route to unban users from a chat
+   * @returns Promise<void>
+   * @introduced 19.02.2021
+   * @edited 19.02.2021
+   */
+
+  @Post(':uuid/admin/unban')
+  async unban(
+    @Request() request: Request,
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Body() user: { uuid: string }
+  ): Promise<void> {
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
+    if (!token) throw new BadRequestException('No Token Provided');
+    const result: HandleService<void> = await this.chatService.handleUnban(
+      uuid,
+      user.uuid,
+      token.substr(7)
+    );
+    if (result instanceof HttpException) throw result;
   }
 
   /**
@@ -207,56 +255,58 @@ export class ChatController {
   @Post(':uuid/admin/kick')
   async kick(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Body() user: { uuid: string }
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    await this.chatService.handleKick();
+    const result: HandleService<void> = await this.chatService.handleKick(
+      uuid,
+      user.uuid,
+      token.substr(7)
+    );
+    if (result instanceof HttpException) throw result;
   }
 
   /**
    * @param request request instance
    * @param uuid uuid of Chat
-   * @param user uuid of User to be promoted
-   * @description route to promote chat members
+   * @param user uuid of User to be edited
+   * @description route to edit chat members
    * @returns Promise<void>
    * @introduced 18.02.2021
    * @edited 18.02.2021
    */
 
-  @Post(':uuid/admin/promote')
-  async promote(
+  @Post(':uuid/admin/edit')
+  async editUser(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string,
-    @Body() user: { user: string }
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Body() user: IUserEdit
   ): Promise<void> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    await this.chatService.handlePromote(uuid, user.user, token.substr(7));
-  }
+    const settings: IUserEdit = {
+      user: user.user,
+      role: user.role in IChatRole && (IChatRole[user.role] as any),
+      permissions: Array.isArray(user.permissions)
+        ? user.permissions.filter((permission: IAdminPermission) => {
+            return IAdminPermission[permission] != undefined;
+          })
+        : [],
+    };
+    for (const key in settings) {
+      if (settings[key as keyof IUserEdit] == null) {
+        throw new BadRequestException('Missing Arguments');
+      }
+    }
 
-  /**
-   * @param request request instance
-   * @param uuid uuid of Chat
-   * @param user uuid of User to be demoted
-   * @description route to demote chat members
-   * @returns Promise<void>
-   * @introduced 18.02.2021
-   * @edited 18.02.2021
-   */
-
-  @Post(':uuid/admin/demote')
-  async demote(
-    @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string,
-    @Body() user: { user: string }
-  ): Promise<void> {
-    const token: string = request.headers['authorization' as keyof Headers]?.toString();
-    if (!token) throw new BadRequestException('No Token Provided');
-    await this.chatService.handleDeomote(uuid, user.user, token.substr(7));
+    const result: HandleService<void> = await this.chatService.handleUserEdit(
+      uuid,
+      settings,
+      token.substr(7)
+    );
+    if (result instanceof HttpException) throw result;
   }
 
   /**
@@ -265,20 +315,18 @@ export class ChatController {
    * @description route to get a specifc chat
    * @returns Promise<IChat>
    * @introduced 18.02.2021
-   * @edited 18.02.2021
+   * @edited 19.02.2021
    */
 
   @Get('get/:uuid')
   async get(
     @Request() request: Request,
-    @Param('uuid', new ParseUUIDPipe())
-    uuid: string
+    @Param('uuid', new ParseUUIDPipe()) uuid: string
   ): Promise<IChat> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
     const chat: HandleService<Chat> = await this.chatService.handleGet(uuid, token.substr(7));
     if (chat instanceof HttpException) throw chat;
-
     const admins: Array<ChatAdmin> = chat.admins;
     return {
       uuid: chat.uuid,
@@ -288,13 +336,16 @@ export class ChatController {
       description: chat.description,
       members: chat.members.map((member: ChatMember) => {
         const user: User = member.user;
-        const admin: any = admins?.find((admin: ChatAdmin) => {
-          admin.userUuid == user.uuid;
+        const chatAdmin: DBResponse<ChatAdmin> = admins?.find((admin: ChatAdmin) => {
+          return admin.userUuid == user.uuid;
         });
-        const section: IChatAdmin = admin && {
-          permissions: IAdminPermissions[admin.permissions],
-          promotedAt: admin.promotedAt,
+        const admin: any = chatAdmin && {
+          promotedAt: chatAdmin.promotedAt,
+          permissions: chatAdmin.permissions.map((perm: AdminPermission) => {
+            return IAdminPermission[perm.permission];
+          }),
         };
+
         return {
           joinedAt: member.joinedAt,
           user: {
@@ -307,10 +358,25 @@ export class ChatController {
             avatar: user.avatar,
             locale: user.locale,
           },
-          ...{ section },
+          ...{ admin },
         };
       }),
-      messages: chat.messages || [],
+      messages: chat.messages,
+      banned: chat.banned.map((member: BannedMember) => {
+        const user: User = member.user;
+        return {
+          bannedAt: member.bannedAt,
+          user: {
+            uuid: user.uuid,
+            createdAt: user.createdAt,
+            name: user.name,
+            tag: user.tag,
+            description: user.description,
+            avatar: user.avatar,
+            locale: user.locale,
+          },
+        };
+      }),
     };
   }
 }

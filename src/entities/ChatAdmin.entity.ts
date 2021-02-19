@@ -1,5 +1,5 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne } from 'typeorm';
-import { IAdminPermissions } from '../routes/Chat/Chat.interface';
+import { Column, CreateDateColumn, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
+import { AdminPermission } from './AdminPermission.entity';
 import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 
@@ -12,7 +12,10 @@ export class ChatAdmin {
 
   @CreateDateColumn({ type: 'timestamp' }) promotedAt: Date;
 
-  @Column('int') permissions: IAdminPermissions;
+  @OneToMany(() => AdminPermission, (adminPermission) => adminPermission.admins, {
+    onDelete: 'CASCADE',
+  })
+  permissions: Array<AdminPermission>;
 
   @ManyToOne(() => User, (user) => user.chats, { onDelete: 'CASCADE' })
   user: User;
