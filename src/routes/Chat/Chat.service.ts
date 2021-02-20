@@ -13,6 +13,7 @@ import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
+import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import { DBResponse, HandleService } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
@@ -35,6 +36,7 @@ export class ChatService {
     @InjectRepository(ChatMember) private chatMemberRepository: Repository<ChatMember>,
     @InjectRepository(BannedMember) private bannedMemberRepository: Repository<BannedMember>,
     @InjectRepository(ChatAdmin) private chatAdminRepository: Repository<ChatAdmin>,
+    @InjectRepository(Message) private messageRepository: Repository<Message>,
     @InjectRepository(AdminPermission)
     private adminPermissionRepository: Repository<AdminPermission>,
     private authService: AuthService
@@ -327,6 +329,43 @@ export class ChatService {
   }
 
   /**
+   * @param messageUuid message uuid
+   * @param text new message content
+   * @param token user auth token
+   * @description
+   * @introduced 20.02.2021
+   * @edited 20.02.2021
+   */
+
+  async handleMessageEdit(
+    messageUuid: string,
+    text: string,
+    token: string
+  ): Promise<HandleService<void>> {
+    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
+    if (payload instanceof HttpException) return payload;
+
+    const message: DBResponse<Message> = await this.messageRepository
+      .createQueryBuilder('message')
+      .where('message.uuid = :uuid', { uuid: messageUuid })
+      .leftJoinAndSelect('message.chat', 'chat')
+      .leftJoinAndSelect('chat.members', 'member')
+      .leftJoinAndSelect('member.user', 'user')
+      .getOne();
+    if (!message) return new NotFoundException('Message Not Found');
+
+    const user: DBResponse<ChatMember> = message.chat.members.find((member: ChatMember) => {
+      return member.userUuid == payload.user;
+    });
+    if (!user) return new NotFoundException('User Not Found');
+    if (user.userUuid != message.userUuid) {
+      return new UnauthorizedException('Only Creator Can Edit Message');
+    }
+
+    await this.messageRepository.save({ ...message, text: text, edited: message.edited + 1 });
+  }
+
+  /**
    * @param chatUuid chat uuid
    * @param uuid
    * @param token user auth token
@@ -494,7 +533,7 @@ export class ChatService {
   /**
    *
    * @param chatUuid chat uuid
-   * @param settings 
+   * @param settings
    * @param token user auth token
    * @description
    * @introduced 18.02.2021
@@ -609,7 +648,7 @@ export class ChatService {
    * @param token user auth token
    * @description
    * @introduced 18.02.2021
-   * @edited 19.02.2021
+   * @edited 20.02.2021
    */
 
   async handleGet(chatUuid: string, token: string): Promise<HandleService<Chat>> {
@@ -624,13 +663,12 @@ export class ChatService {
       .where('chat.uuid = :uuid', { uuid: chatUuid })
       .leftJoinAndSelect('chat.members', 'members')
       .leftJoinAndSelect('members.user', 'member_user')
-      .leftJoinAndSelect('chat.messages', 'messages')
+      .leftJoinAndSelect('chat.messages', 'message')
       .leftJoinAndSelect('chat.banned', 'banned')
       .leftJoinAndSelect('banned.user', 'banned_user')
       .leftJoinAndSelect('chat.admins', 'admins')
       .leftJoinAndSelect('admins.permissions', 'permissions')
       .getOne();
-
     if (!chat) return new NotFoundException('Chat Not Found');
     if (chat.type == IChatType.PRIVATE) {
       const member: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {

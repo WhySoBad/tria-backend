@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, JoinTable, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { IChatType } from '../routes/Chat/Chat.interface';
 import { BannedMember } from './BannedMember.entity';
 import { ChatAdmin } from './ChatAdmin.entity';
@@ -22,7 +22,7 @@ export class Chat {
   members: Array<ChatMember>;
 
   @OneToMany(() => Message, (message) => message.chat)
-  @JoinColumn({ name: 'message' })
+  @JoinTable({ name: 'message' })
   messages: Array<Message>;
 
   @OneToMany(() => ChatAdmin, (chatAdmin) => chatAdmin.chat)

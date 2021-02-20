@@ -88,3 +88,8 @@ export interface IGroupChat {
   description: string;
   members: Array<string>;
 }
+
+export interface WSChatMessage {
+  chat: string;
+  data: string;
+}

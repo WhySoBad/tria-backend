@@ -193,6 +193,35 @@ export class ChatController {
 
   /**
    * @param request request instance
+   * @param uuid message of Message
+   * @param text new content for message
+   * @description route to change content of chat messages
+   * @returns Promise<void>
+   * @introduced 20.02.2021
+   * @edited 20.02.2021
+   */
+
+  @Get('message/:uuid/edit')
+  async messageEdit(
+    @Request() request: Request,
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Body() text: { text: string }
+  ): Promise<void> {
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
+    if (!token) throw new BadRequestException('No Token Provided');
+    if (!text.text) throw new BadRequestException('Missing Arguments');
+    if (typeof text.text != 'string') throw new BadRequestException('Invalid Arguments');
+
+    const result: HandleService<void> = await this.chatService.handleMessageEdit(
+      uuid,
+      text.text,
+      token.substr(7)
+    );
+    if (result instanceof HttpException) throw result;
+  }
+
+  /**
+   * @param request request instance
    * @param uuid uuid of Chat
    * @param user uuid of User to be banned
    * @description route to ban users from a chat

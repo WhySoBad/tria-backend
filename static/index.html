@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Websocket Testing</title>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <h1>Testing</h1>
+    <input type="text" id="inpt" />
+    <button type="submit" onclick="sendMessage()">Send</button>
+    <h1>Messages</h1>
+    <div id="messages" style="display: flex; flex-direction: column"></div>
+    <script>
+      const token = prompt('Enter token');
+      const chat = prompt('Enter chat uuid');
+      const socket = io('http://localhost:3000/chat', {
+        transportOptions: {
+          polling: {
+            extraHeaders: {
+              Authorization: token,
+            },
+          },
+        },
+      });
+
+      socket.on('error', (err) => {
+        console.log(err);
+      });
+
+      socket.on('disconnect', () => {});
+
+      const messages = document.getElementById('messages');
+
+      socket.on('message', ({ chat, message }) => {
+        if (!message || !chat) return;
+        console.log(message);
+        const element = document.createElement('p');
+        const content = document.createTextNode(`${chat} | ${message.text}`);
+        element.appendChild(content);
+        messages.appendChild(content);
+      });
+
+      function sendMessage() {
+        const text = document.getElementById('inpt').value;
+        socket.emit('message', {
+          chat: chat,
+          data: text,
+        });
+        document.getElementById('inpt').value = '';
+      }
+    </script>
+  </body>
+</html>
