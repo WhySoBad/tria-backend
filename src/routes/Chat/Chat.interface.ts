@@ -1,9 +1,24 @@
-export interface IChatMessage {}
+export interface IChatMessage {
+  uuid: string;
+  sender: string;
+  chat: string;
+  createdAt: Date;
+  editedAt: Date;
+  edited: number;
+  pinned: boolean;
+  text: string;
+}
 
-export interface IUserEdit {
+export interface IMemberEdit {
   user: string;
   role: IChatRole;
   permissions: Array<IAdminPermission>;
+}
+
+export interface IMessageEdit {
+  message: string;
+  pinned: boolean;
+  text: string;
 }
 
 export interface IChatEdit {
@@ -89,7 +104,7 @@ export interface IGroupChat {
   members: Array<string>;
 }
 
-export interface WSChatMessage {
+export interface ChatSocket<T> {
   chat: string;
-  data: string;
+  data: T;
 }

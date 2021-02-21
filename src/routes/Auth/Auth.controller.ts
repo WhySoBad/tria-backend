@@ -41,13 +41,6 @@ export class AuthController {
   }
 
   /**
-   *
-   */
-
-  @Get('handshake')
-  async handshake() {}
-
-  /**
    * @param login request body of type ILogin
    * @description route to login an user and generate a JWT
    * @returns Promise<void>

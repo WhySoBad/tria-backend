@@ -1,13 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 
@@ -21,7 +12,7 @@ export class Message {
 
   @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' }) editedAt: Date;
+  @Column({ type: 'timestamp', nullable: true }) editedAt: Date;
 
   @Column({ type: 'int', default: 0 }) edited: number;
 

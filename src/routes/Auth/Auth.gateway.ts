@@ -19,12 +19,12 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param client websocket instance
    * @description handler for general websocket connection
    * @returns Promise<void>
-   * @introduced 18.02.2021
-   * @edited 20.02.2021
+   * @introduced 20.02.2021
+   * @edited 21.02.2021
    */
 
   async handleConnection(client: Socket): Promise<void> {
-    const token: string = client.handshake.headers['authorization'];
+    const token: string = client.handshake.headers['authorization'].substr(7);
     if (!Boolean(token)) {
       client.error('No Token Provided');
       client.disconnect(true);
@@ -51,11 +51,11 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @description handler for general websocket disconnection
    * @returns Promise<void>
    * @introduced 20.02.2021
-   * @edited 20.02.2021
+   * @edited 21.02.2021
    */
 
   async handleDisconnect(client: Socket): Promise<void> {
-    const token: string = client.handshake.headers['authorization'];
+    const token: string = client.handshake.headers['authorization'].substr(7);
     const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return;
     else {

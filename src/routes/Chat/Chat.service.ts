@@ -18,6 +18,7 @@ import { User } from '../../entities/User.entity';
 import { DBResponse, HandleService } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
 import { AuthService } from '../Auth/Auth.service';
+import { ChatGateway } from './Chat.gateway';
 import {
   IAdminPermission,
   IChatEdit,
@@ -25,7 +26,7 @@ import {
   IChatType,
   IGroupChat,
   IPrivateChat,
-  IUserEdit,
+  IMemberEdit,
 } from './Chat.interface';
 
 @Injectable()
@@ -39,7 +40,8 @@ export class ChatService {
     @InjectRepository(Message) private messageRepository: Repository<Message>,
     @InjectRepository(AdminPermission)
     private adminPermissionRepository: Repository<AdminPermission>,
-    private authService: AuthService
+    private authService: AuthService,
+    private chatGateway: ChatGateway
   ) {}
 
   /**
@@ -145,75 +147,14 @@ export class ChatService {
     owner.user = user;
     owner.chat = chat;
     owner.role = IChatRole.OWNER;
-
     chat.type = IChatType[settings.type];
     chat.members = participants;
     chat.name = settings.name;
     chat.tag = settings.tag;
     chat.description = settings.description;
+
     await this.chatRepository.save(chat);
     await this.chatMemberRepository.save(participants);
-  }
-
-  /**
-   * @param chatUuid chat uuid
-   * @param settings
-   * @param token user auth token
-   * @description
-   * @introduced 19.02.2021
-   * @edited 19.02.2021
-   */
-
-  async handleEdit(
-    chatUuid: string,
-    settings: IChatEdit,
-    token: string
-  ): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return payload;
-
-    const chat: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder('chat')
-      .where('chat.uuid = :uuid', { uuid: chatUuid })
-      .leftJoinAndSelect('chat.members', 'members')
-      .leftJoinAndSelect('chat.admins', 'admins')
-      .leftJoinAndSelect('admins.permissions', 'permissions')
-      .getOne();
-
-    if (!chat) return new NotFoundException('Group Not Found');
-    if (chat.type == IChatType.PRIVATE) {
-      return new BadRequestException('Chat Has To Be Group');
-    }
-
-    const existing: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder()
-      .where('LOWER(tag) = LOWER(:tag)', { tag: settings.tag })
-      .getOne();
-
-    if (existing) return new BadRequestException('Group Tag Has To Be Unique');
-
-    const user: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!user) return new NotFoundException('User Not Found');
-    if (user.role == IChatRole.MEMBER) return new UnauthorizedException('Lacking Permissions');
-    if (user.role == IChatRole.ADMIN) {
-      const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-        return admin.userUuid == user.userUuid;
-      });
-      if (!admin) return new NotFoundException('Admin Not Found');
-      if (!admin.permissions.find((p: AdminPermission) => p.permission == IAdminPermission.EDIT)) {
-        return new UnauthorizedException('Lacking Permissions');
-      }
-    }
-
-    await this.chatRepository.save({
-      ...chat,
-      tag: settings.tag || chat.tag,
-      name: settings.name || chat.name,
-      description: settings.description || chat.description,
-      type: (settings.type && IChatType[settings.type]) || chat.type,
-    });
   }
 
   /**
@@ -221,7 +162,7 @@ export class ChatService {
    * @param token user auth token
    * @description
    * @introduced 18.02.2021
-   * @edited 19.02.2021
+   * @edited 21.02.2021
    */
 
   async handleJoin(chatUuid: string, token: string): Promise<HandleService<void>> {
@@ -258,7 +199,9 @@ export class ChatService {
     const member: ChatMember = new ChatMember();
     member.chat = chat;
     member.user = user;
-    this.chatMemberRepository.save(member);
+
+    await this.chatMemberRepository.save(member);
+    this.chatGateway.handleGroupUserJoin(chat.uuid, member.userUuid, token);
   }
 
   /**
@@ -266,7 +209,7 @@ export class ChatService {
    * @param token user auth token
    * @description
    * @introduced 18.02.2021
-   * @edited 18.02.2021
+   * @edited 21.02.2021
    */
 
   async handleLeave(chatUuid: string, token: string): Promise<HandleService<void>> {
@@ -294,6 +237,7 @@ export class ChatService {
     }
 
     await this.chatMemberRepository.remove(user);
+    this.chatGateway.handleGroupUserLeave(chat.uuid, payload.user, token);
   }
 
   /**
@@ -301,7 +245,7 @@ export class ChatService {
    * @param token user auth token
    * @description
    * @introduced 18.02.2021
-   * @edited 19.02.2021
+   * @edited 21.02.2021
    */
 
   async handleDelete(chatUuid: string, token: string): Promise<HandleService<void>> {
@@ -326,43 +270,7 @@ export class ChatService {
     }
 
     await this.chatRepository.remove(chat);
-  }
-
-  /**
-   * @param messageUuid message uuid
-   * @param text new message content
-   * @param token user auth token
-   * @description
-   * @introduced 20.02.2021
-   * @edited 20.02.2021
-   */
-
-  async handleMessageEdit(
-    messageUuid: string,
-    text: string,
-    token: string
-  ): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return payload;
-
-    const message: DBResponse<Message> = await this.messageRepository
-      .createQueryBuilder('message')
-      .where('message.uuid = :uuid', { uuid: messageUuid })
-      .leftJoinAndSelect('message.chat', 'chat')
-      .leftJoinAndSelect('chat.members', 'member')
-      .leftJoinAndSelect('member.user', 'user')
-      .getOne();
-    if (!message) return new NotFoundException('Message Not Found');
-
-    const user: DBResponse<ChatMember> = message.chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!user) return new NotFoundException('User Not Found');
-    if (user.userUuid != message.userUuid) {
-      return new UnauthorizedException('Only Creator Can Edit Message');
-    }
-
-    await this.messageRepository.save({ ...message, text: text, edited: message.edited + 1 });
+    this.chatGateway.handleChatDelete(chat.uuid);
   }
 
   /**
@@ -426,6 +334,7 @@ export class ChatService {
 
     await this.bannedMemberRepository.save(banned);
     await this.chatMemberRepository.remove(member);
+    this.chatGateway.handleGroupUserBan(chat.uuid, member.userUuid);
   }
 
   /**
@@ -531,119 +440,6 @@ export class ChatService {
   }
 
   /**
-   *
-   * @param chatUuid chat uuid
-   * @param settings
-   * @param token user auth token
-   * @description
-   * @introduced 18.02.2021
-   * @edited 19.02.2021
-   */
-
-  async handleUserEdit(
-    chatUuid: string,
-    settings: IUserEdit,
-    token: string
-  ): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return payload;
-
-    const chat: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder('chat')
-      .where('chat.uuid = :uuid', { uuid: chatUuid })
-      .leftJoinAndSelect('chat.members', 'members')
-      .leftJoinAndSelect('members.user', 'user')
-      .leftJoinAndSelect('chat.banned', 'banned')
-      .leftJoinAndSelect('chat.admins', 'admins')
-      .leftJoinAndSelect('admins.permissions', 'permissions')
-      .getOne();
-
-    if (!chat) return new NotFoundException('Chat Not Found');
-    if (chat.type == IChatType.PRIVATE) return new BadRequestException('Chat Has To Be Group');
-
-    const user: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!user) return new NotFoundException('User Not Found');
-    if (user.role == IChatRole.MEMBER) {
-      return new UnauthorizedException('Lacking Permissions');
-    }
-
-    const member: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == settings.user;
-    });
-    if (!member) return new NotFoundException('User Not Found');
-    if (member.role == IChatRole.OWNER) return new BadRequestException("Owner Can't Be Edited");
-
-    if (user.role === IChatRole.ADMIN) {
-      const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-        return admin.userUuid == payload.user;
-      });
-      if (!admin) return new NotFoundException('Admin Not Found');
-      const canEdit: DBResponse<any> = admin.permissions.find((permission: AdminPermission) => {
-        return permission.permission == IAdminPermission.USERS;
-      });
-      if (!canEdit) return new UnauthorizedException('Lacking Permissions');
-      if (settings.role == IChatRole.OWNER) {
-        return new UnauthorizedException("Admin Can't Change Owner");
-      }
-    }
-
-    if (settings.role === IChatRole.OWNER) {
-      await this.chatMemberRepository.save({ ...user, role: IChatRole.MEMBER });
-      await this.chatMemberRepository.save({ ...member, role: IChatRole.OWNER });
-    }
-
-    if (settings.role === IChatRole.ADMIN) {
-      if (member.role === IChatRole.ADMIN) {
-        const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-          return admin.userUuid == settings.user;
-        });
-        if (!admin) {
-          await this.chatMemberRepository.save({ ...member, role: IChatRole.MEMBER });
-          return new NotFoundException('Admin Not Found');
-        }
-        await this.chatAdminRepository.save({
-          ...admin,
-          permissions: [
-            ...(await Promise.all(
-              settings.permissions.map(async (perm: IAdminPermission) => {
-                const permission: AdminPermission = new AdminPermission();
-                permission.permission = IAdminPermission[perm] as any;
-                await this.adminPermissionRepository.save(permission);
-                return permission;
-              })
-            )),
-          ],
-        });
-      } else {
-        const admin: ChatAdmin = new ChatAdmin();
-        admin.chat = chat;
-        admin.user = member.user;
-        admin.permissions = [
-          ...settings.permissions.map((perm: IAdminPermission) => {
-            const permission: AdminPermission = new AdminPermission();
-            permission.permission = perm;
-            return permission;
-          }),
-        ];
-        await this.chatMemberRepository.save({ ...member, role: IChatRole.ADMIN });
-        await this.chatAdminRepository.save(admin);
-      }
-    }
-
-    if (settings.role === IChatRole.MEMBER) {
-      if (member.role === IChatRole.MEMBER) return;
-      const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-        return admin.userUuid == settings.user;
-      });
-      if (!admin) return new NotFoundException('Admin Not Found');
-      await this.chatAdminRepository.remove(admin);
-      await this.chatMemberRepository.save({ ...member, role: IChatRole.MEMBER });
-    }
-  }
-
-  /**
    * @param chatUuid chat uuid
    * @param token user auth token
    * @description
@@ -664,6 +460,7 @@ export class ChatService {
       .leftJoinAndSelect('chat.members', 'members')
       .leftJoinAndSelect('members.user', 'member_user')
       .leftJoinAndSelect('chat.messages', 'message')
+      .orderBy('message.createdAt', 'ASC')
       .leftJoinAndSelect('chat.banned', 'banned')
       .leftJoinAndSelect('banned.user', 'banned_user')
       .leftJoinAndSelect('chat.admins', 'admins')

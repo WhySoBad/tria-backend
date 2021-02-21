@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { IChatRole } from '../routes/Chat/Chat.interface';
 import { Chat } from './Chat.entity';
-import { Message } from './Message.entity';
 import { User } from './User.entity';
 
 @Entity()
