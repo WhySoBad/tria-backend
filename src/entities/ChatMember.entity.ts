@@ -23,10 +23,10 @@ export class ChatMember {
   @Column({ type: 'int', default: IChatRole.MEMBER }) role: IChatRole;
 
   @ManyToOne(() => User, (user) => user.chats, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userUuid' })
+  @JoinColumn({ name: 'userUuid', referencedColumnName: 'uuid' })
   user: User;
 
   @ManyToOne(() => Chat, (chat) => chat.members, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'chatUuid' })
+  @JoinColumn({ name: 'chatUuid', referencedColumnName: 'uuid' })
   chat: Chat;
 }

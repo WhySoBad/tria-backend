@@ -61,7 +61,7 @@ export class UserService {
    * @description function to verify an user
    * @returns Promise<HandleService<void>>
    * @introduced 15.02.2021
-   * @edited 15.02.2021
+   * @edited 20.02.2021
    */
 
   async handleVerify(uuid: string): Promise<HandleService<void>> {
@@ -71,7 +71,8 @@ export class UserService {
     if (!pending) return new NotFoundException('User Not Found');
     let user = new User();
     user = { ...user, ...pending };
-    user.verified = false;
+    user.online = false;
+    user.lastSeen = new Date();
     await this.userRepository.save(user);
     await this.pendingUserRepository.remove(pending);
   }

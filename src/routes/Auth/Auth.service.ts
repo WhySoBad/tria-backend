@@ -57,7 +57,7 @@ export class AuthService {
    * @description function to verify a JWT
    * @returns Promise<HandleService<TokenPayload>>
    * @introduced 15.02.2021
-   * @edited 18.02.2021
+   * @edited 21.02.2021
    */
 
   public async verifyToken(token: string): Promise<HandleService<TokenPayload>> {
@@ -69,7 +69,7 @@ export class AuthService {
       if (banned) return new UnauthorizedException('Token Is Banned');
       else return encoded;
     } catch (err) {
-      return new UnauthorizedException('Invalid Token');
+      return new BadRequestException('Invalid Token');
     }
   }
 

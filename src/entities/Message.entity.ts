@@ -6,11 +6,23 @@ import { User } from './User.entity';
 export class Message {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
+  @Column('uuid') chatUuid: string;
+
+  @Column('uuid') userUuid: string;
+
   @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 
-  @Column() text: string;
+  @Column({ type: 'timestamp', nullable: true }) editedAt: Date;
 
-  @ManyToOne(() => Chat, (chat) => chat.messages) chat: Chat;
+  @Column({ type: 'int', default: 0 }) edited: number;
 
-  @ManyToOne(() => User) sender: User;
+  @Column({ type: 'text' }) text: string;
+
+  @Column({ type: 'boolean', default: false }) pinned: boolean;
+
+  @ManyToOne(() => Chat, (chat) => chat.messages, { onDelete: 'CASCADE' })
+  chat: Chat;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  user: User;
 }

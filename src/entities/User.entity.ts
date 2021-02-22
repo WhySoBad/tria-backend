@@ -7,14 +7,16 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { BannedMember } from './BannedMember.entity';
-import { Chat } from './Chat.entity';
 import { ChatMember } from './ChatMember.entity';
+import { Message } from './Message.entity';
 
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
   @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
+
+  @Column('timestamp') lastSeen: Date;
 
   @Column('text') mail: string;
 
@@ -30,13 +32,16 @@ export class User {
 
   @Column('text') locale: string;
 
-  @Column('boolean', { default: false }) verified: boolean;
+  @Column('boolean') online: boolean;
 
   @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   @JoinTable({ name: 'chat_member' })
-  chats: Array<Chat>;
+  chats: Array<ChatMember>;
 
   @OneToMany(() => BannedMember, (bannedMember) => bannedMember.user)
   @JoinTable({ name: 'banned_member' })
-  bannedChats: Array<Chat>;
+  bannedChats: Array<BannedMember>;
+
+  @OneToMany(() => Message, (message) => message.user)
+  messages: Array<Message>;
 }
