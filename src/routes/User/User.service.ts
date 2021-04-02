@@ -132,21 +132,28 @@ export class UserService {
   }
 
   /**
-   *
-   * @param uuid user uuid
    * @param token user auth token
+   * @param uuid user uuid
    * @description cron task firing every day at 00:00.00 to delete expired pending users
    * @returns Promise<HandleService<User>>
    * @introduced 15.02.2021
-   * @edited 16.02.2021
+   * @edited 24.02.2021
    */
 
-  async handleGet(uuid: string, token: string): Promise<HandleService<User>> {
+  async handleGet(token: string, uuid?: string): Promise<HandleService<User>> {
     const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return payload;
-    const user: DBResponse<User> = await this.userRepository.findOne({
-      uuid: uuid.toLowerCase(),
-    });
+    const user: DBResponse<User> = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.uuid = :uuid', {
+        uuid: uuid?.toLowerCase() || payload.user,
+      })
+      .leftJoinAndSelect('user.chats', 'chats')
+      .leftJoinAndSelect('chats.chat', 'chat')
+      .leftJoinAndSelect('chat.messages', 'message')
+      .leftJoinAndSelect('chat.members', 'members')
+      .leftJoinAndSelect('members.user', 'member_user')
+      .getOne();
     if (!user) return new NotFoundException('User Does Not Exist');
     else return user;
   }

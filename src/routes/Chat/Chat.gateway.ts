@@ -3,8 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   ConnectedSocket,
   MessageBody,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -21,6 +19,7 @@ import { DBResponse, HandleService } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
 import { AuthService } from '../Auth/Auth.service';
 import {
+  ChatEvent,
   ChatSocket,
   IAdminPermission,
   IChatEdit,
@@ -30,10 +29,9 @@ import {
   IMessageEdit,
 } from './Chat.interface';
 
-@WebSocketGateway({ namespace: 'chat' })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+@WebSocketGateway()
+export class ChatGateway {
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Chat) private chatRepository: Repository<Chat>,
     @InjectRepository(ChatMember) private chatMemberRepository: Repository<ChatMember>,
     @InjectRepository(ChatAdmin) private chatAdminRepository: Repository<ChatAdmin>,
@@ -46,67 +44,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
   /**
-   * @param client websocket instance
-   * @description
-   * @returns Promise<void>
-   * @introduced 20.02.2021
-   * @edited 21.02.2021
-   */
-
-  async handleConnection(client: Socket) {
-    const token: string = client.handshake.headers['authorization'].substr(7);
-    if (!Boolean(token)) return client.error('No Token Provided');
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return client.error(payload.message);
-    const user: DBResponse<User> = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.uuid = :uuid', { uuid: payload.user })
-      .leftJoinAndSelect('user.chats', 'chat')
-      .getOne();
-    if (!user) {
-      client.error('User Not Found');
-      client.disconnect(true);
-    }
-    await new Promise<void>((resolve) => {
-      user?.chats.forEach((member: ChatMember) => {
-        client.join(member.chatUuid.toString(), (err) => {
-          resolve();
-        });
-      });
-    });
-  }
-
-  /**
-   * @param client websocket instance
-   * @description
-   * @returns Promise<void>
-   * @introduced 20.02.2021
-   * @edited 21.02.2021
-   */
-
-  async handleDisconnect(client: Socket): Promise<void> {
-    const token: string = client.handshake.headers['authorization'].substr(7);
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return;
-    const user: DBResponse<User> = await this.userRepository.findOne({ uuid: payload.user });
-    await this.userRepository.save({ ...user, lastSeen: new Date() });
-  }
-
-  /**
    * @param message
+   *
    * @param client
+   *
    * @description
+   *
    * @returns Promise<void>
+   *
    * @introduced 20.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
-  @SubscribeMessage('chatMessage')
+  @SubscribeMessage(ChatEvent.MESSAGE)
   async handleMessage(
     @MessageBody() body: ChatSocket<string>,
     @ConnectedSocket() client: Socket
   ): Promise<void> {
-    const token: string = client.handshake.headers['authorization'].substr(7);
+    const token: string = client.handshake.headers['authorization']?.substr(7);
     if (!Boolean(token)) return client.error('No Token Provided');
     const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return client.error(payload.message);
@@ -129,7 +85,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     await this.messageRepository.save(message);
 
-    this.server.to(body.chat).emit('chatMessage', {
+    this.server.to(body.chat).emit(ChatEvent.MESSAGE, {
       uuid: message.uuid,
       chat: message.chatUuid,
       sender: message.userUuid,
@@ -142,19 +98,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * @param body
+   *
    * @param client websocket instance
+   *
    * @description
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
-  @SubscribeMessage('chatEdit')
+  @SubscribeMessage(ChatEvent.CHAT_EDIT)
   async handleChatEdit(
     @MessageBody() body: ChatSocket<IChatEdit>,
     @ConnectedSocket() client: Socket
   ): Promise<void> {
-    const token: string = client.handshake.headers['authorization'].substr(7);
+    const token: string = client.handshake.headers['authorization']?.substr(7);
     if (!Boolean(token)) return client.error('No Token Provided');
     const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return client.error(payload.message);
@@ -208,7 +169,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type: (settings.type && IChatType[settings.type]) || chat.type,
     });
 
-    this.server.to(body.chat).emit('chatEdit', {
+    this.server.to(body.chat).emit(ChatEvent.CHAT_EDIT, {
       chat: body.chat,
       tag: settings.tag || chat.tag,
       name: settings.name || chat.name,
@@ -219,19 +180,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * @param body
+   *
    * @param client websocket instance
+   *
    * @description
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
-  @SubscribeMessage('messageEdit')
+  @SubscribeMessage(ChatEvent.MESSAGE_EDIT)
   async handleMessageEdit(
     @MessageBody() body: IMessageEdit,
     @ConnectedSocket() client: Socket
   ): Promise<void> {
-    const token: string = client.handshake.headers['authorization'].substr(7);
+    const token: string = client.handshake.headers['authorization']?.substr(7);
     if (!Boolean(token)) return client.error('No Token Provided');
     const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return client.error(payload.message);
@@ -271,7 +237,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     await this.messageRepository.save(editedMessage);
 
-    this.server.to(editedMessage.chatUuid).emit('messageEdit', {
+    this.server.to(editedMessage.chatUuid).emit(ChatEvent.MESSAGE_EDIT, {
       chat: editedMessage.chatUuid,
       message: editedMessage.uuid,
       text: editedMessage.text,
@@ -283,19 +249,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * @param body
+   *
    * @param client websocket instance
+   *
    * @description
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
-  @SubscribeMessage('memberEdit')
+  @SubscribeMessage(ChatEvent.MEMBER_EDIT)
   async handleMemberEdit(
     @MessageBody() body: ChatSocket<IMemberEdit>,
     @ConnectedSocket() client: Socket
   ): Promise<void> {
-    const token: string = client.handshake.headers['authorization'].substr(7);
+    const token: string = client.handshake.headers['authorization']?.substr(7);
     if (!Boolean(token)) return client.error('No Token Provided');
     const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
     if (payload instanceof HttpException) return client.error(payload.message);
@@ -354,13 +325,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (settings.role === IChatRole.OWNER) {
       await this.chatMemberRepository.save({ ...user, role: IChatRole.MEMBER });
       await this.chatMemberRepository.save({ ...member, role: IChatRole.OWNER });
-      this.server.to(chat.uuid).emit('memberEdit', {
+      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
         chat: chat.uuid,
         user: user.userUuid,
         role: IChatRole[IChatRole.MEMBER],
         permissions: [],
       });
-      this.server.to(chat.uuid).emit('memberEdit', {
+      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
         chat: chat.uuid,
         user: member.userUuid,
         role: IChatRole[IChatRole.OWNER],
@@ -402,7 +373,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.chatMemberRepository.save({ ...member, role: IChatRole.ADMIN });
         await this.chatAdminRepository.save(admin);
       }
-      this.server.to(chat.uuid).emit('memberEdit', {
+      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
         chat: chat.uuid,
         user: member.userUuid,
         role: IChatRole[IChatRole.ADMIN],
@@ -418,7 +389,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!admin) return client.error('Admin Not Found');
       await this.chatAdminRepository.remove(admin);
       await this.chatMemberRepository.save({ ...member, role: IChatRole.MEMBER });
-      this.server.to(chat.uuid).emit('memberEdit', {
+      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
         chat: chat.uuid,
         user: member.userUuid,
         role: IChatRole[IChatRole.MEMBER],
@@ -429,31 +400,41 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * @param chatUuid uuid of Chat
+   *
    * @description handler to emit websockets to online chatmembers for deleting the chat on runtime
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
   async handleChatDelete(chatUuid: string): Promise<void> {
-    this.server.to(chatUuid).emit('chatDelete', { chat: chatUuid });
+    this.server.to(chatUuid).emit(ChatEvent.CHAT_DELETE, { chat: chatUuid });
   }
 
   /**
    * @param chatUuid uuid of Chat
+   *
    * @param userUuid uuid of User
+   *
    * @param token user auth token
+   *
    * @description handler to emit websockets to online chatmembers to add the new member to the chat on runtime
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
   async handleGroupUserJoin(chatUuid: string, userUuid: string, token: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
-      const clientToken: string = client.handshake.headers['authorization'].substr(7);
+      const clientToken: string = client.handshake.headers['authorization']?.substr(7);
       if (clientToken == token) client.join(chatUuid);
     }
 
@@ -469,10 +450,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
     if (!member) return; //maybe error message -> to who (?)
     const user: User = member.user;
-    this.server.to(chatUuid).emit('memberJoin', {
+
+    this.server.to(chatUuid).emit(ChatEvent.MEMBER_JOIN, {
       chat: chatUuid,
       user: {
         uuid: user.uuid,
+        joinedAt: member.joinedAt,
         createdAt: user.createdAt,
         role: IChatRole[member.role],
         name: user.name,
@@ -480,47 +463,58 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         description: user.description,
         avatar: user.avatar,
         locale: user.locale,
+        online: user.online,
       },
     });
   }
 
   /**
    * @param chatUuid uuid of Chat
+   *
    * @param userUuid uuid of User
+   *
    * @description handler to emit websockets to online chatmembers to delete the member from the chat on runtime
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
   async handleGroupUserLeave(chatUuid: string, userUuid: string, token: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
-      const clientToken: string = client.handshake.headers['authorization'].substr(7);
+      const clientToken: string = client.handshake.headers['authorization']?.substr(7);
       if (clientToken == token) client.leave(chatUuid);
     }
-    this.server.to(chatUuid).emit('memberLeave', { chat: chatUuid, user: userUuid });
+    this.server.to(chatUuid).emit(ChatEvent.MEMBER_LEAVE, { chat: chatUuid, user: userUuid });
   }
 
   /**
    * @param chatUuid uuid of Chat
+   *
    * @param userUuid uuid of User
+   *
    * @description handler to emit websockets to online chatmembers to delete the banned member from the chat on runtime
+   *
    * @returns Promise<void>
+   *
    * @introduced 21.02.2021
-   * @edited 21.02.2021
+   *
+   * @edited 14.03.2021
    */
 
   async handleGroupUserBan(chatUuid: string, userUuid: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
-      const token: string = client.handshake.headers['authorization'].substr(7);
+      const token: string = client.handshake.headers['authorization']?.substr(7);
       const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
       if (!payload || payload instanceof HttpException) return; //maybe error message -> to who (?)
       if (payload.user == userUuid) client.leave(chatUuid);
     }
-    this.server.to(chatUuid).emit('memberBanned', { chat: chatUuid, user: userUuid });
+    this.server.to(chatUuid).emit(ChatEvent.MEMBER_BANNED, { chat: chatUuid, user: userUuid });
   }
 }

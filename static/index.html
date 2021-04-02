@@ -60,7 +60,7 @@
           .then(async ({ data }) => {
             token = data;
             chatUuid = prompt('Enter chat uuid');
-            socket = io('http://localhost:3000/chat', {
+            socket = io('http://localhost:3000', {
               transportOptions: { polling: { extraHeaders: { Authorization: `Bearer ${token}` } } },
             });
             const payload = getTokenPayload(token);
@@ -91,16 +91,16 @@
 
             socket.on('disconnect', () => {});
 
-            socket.on('chatMessage', async ({ text, sender, createdAt, uuid, ...rest }) => {
+            socket.on('MESSAGE', async ({ text, sender, createdAt, uuid, ...rest }) => {
               if (!rest || !chat) return;
               createMessage(text, sender, createdAt, uuid);
             });
 
-            socket.on('chatEdit', ({ chat, name, ...rest }) => {
+            socket.on('CHAT_EDIT', ({ chat, name, ...rest }) => {
               document.getElementById('group-name').innerHTML = name;
             });
 
-            socket.on('messageEdit', ({ message, text, pinned }) => {
+            socket.on('MESSAGE_EDIT', ({ message, text, pinned }) => {
               console.log('message edited');
               const children = document.getElementById('messages').children;
               for (let child of children) {
@@ -108,7 +108,7 @@
               }
             });
 
-            socket.on('memberEdit', (member) => {
+            socket.on('MEMBER_EDIT', (member) => {
               console.log('Member Edited', member);
             });
 
@@ -116,17 +116,17 @@
               console.log('Chat Deleted', chat);
             });
 
-            socket.on('memberJoin', ({ chat, user }) => {
+            socket.on('MEMBER_JOIN', ({ chat, user }) => {
               console.log(`User Joined The Chat [${chat}]`, user);
             });
 
-            socket.on('memberLeave', ({ chat, user }) => {
+            socket.on('MEMBER_LEAVE', ({ chat, user }) => {
               console.log(`User Left The Chat [${chat}]`, user);
             });
           });
         function sendMessage() {
           const text = document.getElementById('inpt1').value;
-          socket.emit('chatMessage', {
+          socket.emit('MESSAGE', {
             chat: chatUuid,
             data: text,
           });
@@ -135,7 +135,7 @@
 
         function changeName() {
           const text = document.getElementById('inpt2').value;
-          socket.emit('chatEdit', {
+          socket.emit('CHAT_EDIT', {
             chat: chatUuid,
             data: {
               name: text,
@@ -147,7 +147,7 @@
         function changeMessage() {
           const message = 'c1f55f00-c10f-45d9-9ac0-a79e0bec1364';
           const text = document.getElementById('inpt3').value;
-          socket.emit('messageEdit', {
+          socket.emit('MESSAGE_EDIT', {
             message: message,
             text: text,
           });
@@ -157,7 +157,7 @@
         function editMember() {
           const member = '0ceeb8d2-b286-4e6d-b449-67348a5c02f4';
           const role = document.getElementById('inpt4').value;
-          socket.emit('memberEdit', {
+          socket.emit('MEMBER_EDIT', {
             chat: chatUuid,
             data: {
               user: member,

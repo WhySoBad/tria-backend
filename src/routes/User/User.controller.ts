@@ -9,8 +9,12 @@ import {
   Post,
   Request,
 } from '@nestjs/common';
+import { Chat } from '../../entities/Chat.entity';
+import { ChatMember } from '../../entities/ChatMember.entity';
+import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import { HandleService } from '../../util/Types.type';
+import { TokenPayload } from '../Auth/Auth.interface';
 import { IPendingUser, IUser } from './User.interface';
 import { UserService } from './User.service';
 
@@ -119,27 +123,84 @@ export class UserController {
    * @description route to get an user by its uuid
    * @returns Promise<IUser>
    * @introduced 15.02.2021
-   * @edited 17.02.2021
+   * @edited 24.02.2021
    */
 
   @Get('get/:uuid')
-  async get(
+  async getByUuid(
     @Request() request: Request,
     @Param('uuid', new ParseUUIDPipe())
     uuid: string
   ): Promise<IUser> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    const user: HandleService<User> = await this.userService.handleGet(uuid, token.substr(7));
+    const user: HandleService<User> = await this.userService.handleGet(token.substr(7), uuid);
+    if (user instanceof HttpException) throw user;
+    const { password, chats, bannedChats, mail, messages, ...rest } = user;
+    return rest;
+  }
+
+  /**
+   * @param request request instance
+   * @description route to get the logged in user
+   * @returns Promise<IUser>
+   * @introduced 24.02.2021
+   * @edited 24.02.2021
+   */
+
+  @Get('get')
+  async getLoggedIn(@Request() request: Request): Promise<any> {
+    const token: string = request.headers['authorization' as keyof Headers]?.toString();
+    if (!token) throw new BadRequestException('No Token Provided');
+    const user: HandleService<User> = await this.userService.handleGet(token.substr(7));
     if (user instanceof HttpException) throw user;
     return {
       uuid: user.uuid,
-      createdAt: user.createdAt,
       name: user.name,
       tag: user.tag,
-      description: user.description,
       avatar: user.avatar,
+      description: user.description,
+      mail: user.mail,
       locale: user.locale,
+      online: user.online,
+      createdAt: user.createdAt,
+      lastSeen: user.lastSeen,
+      chats: user.chats.map((member: ChatMember) => {
+        const chat: Chat = member.chat;
+        return {
+          ...chat,
+          members: chat.members.map((member: ChatMember) => {
+            const user: User = member.user;
+            return {
+              role: member.role,
+              joinedAt: member.joinedAt,
+              user: {
+                uuid: user.uuid,
+                name: user.name,
+                tag: user.tag,
+                avatar: user.avatar,
+                description: user.description,
+                locale: user.locale,
+                online: user.online,
+                createdAt: user.createdAt,
+                lastSeen: user.lastSeen,
+              },
+            };
+          }),
+          messages: chat.messages.map((message: Message) => {
+            return {
+              uuid: message.uuid,
+              chat: message.chatUuid,
+              createdAt: message.createdAt,
+              editedAt: message.editedAt,
+              edited: message.edited,
+              text: message.text,
+              pinned: message.pinned,
+              user: message.userUuid,
+            };
+          }),
+        };
+      }),
     };
   }
 }

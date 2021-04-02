@@ -108,3 +108,14 @@ export interface ChatSocket<T> {
   chat: string;
   data: T;
 }
+
+export enum ChatEvent {
+  MESSAGE = 'MESSAGE',
+  CHAT_EDIT = 'CHAT_EDIT',
+  MESSAGE_EDIT = 'MESSAGE_EDIT',
+  MEMBER_EDIT = 'MEMBER_EDIT',
+  CHAT_DELETE = 'CHAT_DELETE',
+  MEMBER_JOIN = 'MEMBER_JOIN',
+  MEMBER_LEAVE = 'MEMBER_LEAVE',
+  MEMBER_BANNED = 'MEMBER_BANNED',
+}

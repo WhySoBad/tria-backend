@@ -29,7 +29,9 @@ import { ChatService } from './Chat.service';
 
 /**
  * @description chats route to create, modiy, handle and delete chats
+ *
  * @introduced 18.02.2021
+ *
  * @edited 18.02.2021
  */
 
@@ -39,10 +41,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param chat request body of type IPrivateChat
+   *
    * @description route to create a new PrivateChat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 18.02.2021
    */
 
@@ -64,10 +71,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param chat request body of type IGroupChat
+   *
    * @description route to create a new GroupChat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 18.02.2021
    */
 
@@ -97,10 +109,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @description route to join a chat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 18.02.2021
    */
 
@@ -117,10 +134,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @description route leave a chat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 18.02.2021
    */
 
@@ -137,10 +159,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @description route to delete a chat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 18.02.2021
    */
 
@@ -157,11 +184,17 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @param user uuid of User to be banned
+   *
    * @description route to ban users from a chat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 19.02.2021
    */
 
@@ -183,11 +216,17 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @param user uuid of User to be unbanned
+   *
    * @description route to unban users from a chat
+   *
    * @returns Promise<void>
+   *
    * @introduced 19.02.2021
+   *
    * @edited 19.02.2021
    */
 
@@ -209,10 +248,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @description route to kick users from a chat
+   *
    * @returns Promise<void>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 18.02.2021
    */
 
@@ -234,10 +278,15 @@ export class ChatController {
 
   /**
    * @param request request instance
+   *
    * @param uuid uuid of Chat
+   *
    * @description route to get a specifc chat
+   *
    * @returns Promise<IChat>
+   *
    * @introduced 18.02.2021
+   *
    * @edited 21.02.2021
    */
 
