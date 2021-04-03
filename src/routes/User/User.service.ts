@@ -1,10 +1,10 @@
-import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PendingUser } from '../../entities/PendingUser.entity';
 import { User } from '../../entities/User.entity';
-import { DBResponse, HandleService } from '../../util/Types.type';
+import { DBResponse } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
 import { AuthService } from '../Auth/Auth.service';
 import { IPendingUser, IUser } from './User.interface';
@@ -14,19 +14,18 @@ export class UserService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(PendingUser)
-    private pendingUserRepository: Repository<PendingUser>,
-    private authService: AuthService
+    private pendingUserRepository: Repository<PendingUser>
   ) {}
 
   /**
+   * Function to register a new user
+   *
    * @param settings settings of  type IPendingUser
-   * @description function to register a new user
-   * @returns Promise<HandleService<void>>
-   * @introduced 15.02.2021
-   * @edited 18.02.2021
+   *
+   * @returns Promise<void>
    */
 
-  async handleRegister(settings: IPendingUser): Promise<HandleService<void>> {
+  async handleRegister(settings: IPendingUser): Promise<void> {
     let user: PendingUser = new PendingUser();
     const hashed: string = await AuthService.Hash(settings.password);
     user.name = settings.name;
@@ -50,25 +49,25 @@ export class UserService {
       .getOne();
 
     if (pendingExists || userExists) {
-      return new BadRequestException('Mail And Tag Have To Be Unique');
+      throw new BadRequestException('Mail And Tag Have To Be Unique');
     }
 
     await this.pendingUserRepository.save(user);
   }
 
   /**
+   * Function to verify an user
+   *
    * @param uuid uuid of PendingUser to be verified
-   * @description function to verify an user
-   * @returns Promise<HandleService<void>>
-   * @introduced 15.02.2021
-   * @edited 20.02.2021
+   *
+   * @returns Promise<void>
    */
 
-  async handleVerify(uuid: string): Promise<HandleService<void>> {
+  async handleVerify(uuid: string): Promise<void> {
     const pending: DBResponse<PendingUser> = await this.pendingUserRepository.findOne({
       uuid: uuid,
     });
-    if (!pending) return new NotFoundException('User Not Found');
+    if (!pending) throw new NotFoundException('User Not Found');
     let user = new User();
     user = { ...user, ...pending };
     user.online = false;
@@ -78,21 +77,20 @@ export class UserService {
   }
 
   /**
+   * Functoin to edit an user
+   *
    * @param settings settings of type IUser
-   * @param token user auth token
-   * @description function to edit an user
-   * @returns Promise<HandleService<void>>
-   * @introduced 15.02.2021
-   * @edited 15.02.2021
+   *
+   * @param payload payload of the user jwt
+   *
+   * @returns Promise<void>
    */
 
-  async handleEdit(settings: IUser, token: string): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return payload;
+  async handleEdit(settings: IUser, payload: TokenPayload): Promise<void> {
     const user: DBResponse<User> = await this.userRepository.findOne({
       uuid: payload.user,
     });
-    if (!user) return new NotFoundException('User Not Found');
+    if (!user) throw new NotFoundException('User Not Found');
     if (settings.tag) {
       const tagPending = await this.pendingUserRepository
         .createQueryBuilder()
@@ -107,46 +105,43 @@ export class UserService {
         .getOne();
 
       if (tagExists || tagPending) {
-        return new BadRequestException('Tag Has To Be Unique');
+        throw new BadRequestException('Tag Has To Be Unique');
       }
     }
     await this.userRepository.update({ uuid: payload.user }, { ...user, ...settings });
   }
 
   /**
-   * @param token user auth token
-   * @description function to delete an user
-   * @returns Promise<HandleService<void>>
-   * @introduced 15.02.2021
-   * @edited 15.02.2021
+   * Function to delete an user
+   *
+   * @param payload payload of the user jwt
+   *
+   * @returns Promise<void>
    */
 
-  async handleDelete(token: string): Promise<HandleService<void>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return payload;
+  async handleDelete(payload: TokenPayload): Promise<void> {
     const user: DBResponse<User> = await this.userRepository.findOne({
       uuid: payload.user,
     });
-    if (!user) return new NotFoundException('User Not Found');
+    if (!user) throw new NotFoundException('User Not Found');
     await this.userRepository.remove(user);
   }
 
   /**
-   * @param token user auth token
+   * Get a user
+   *
+   * When no uuid is provided the logged in user is returned
+   *
    * @param uuid user uuid
-   * @description cron task firing every day at 00:00.00 to delete expired pending users
-   * @returns Promise<HandleService<User>>
-   * @introduced 15.02.2021
-   * @edited 24.02.2021
+   *
+   * @returns Promise<User>
    */
 
-  async handleGet(token: string, uuid?: string): Promise<HandleService<User>> {
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return payload;
+  async handleGet(uuid: string): Promise<User> {
     const user: DBResponse<User> = await this.userRepository
       .createQueryBuilder('user')
       .where('user.uuid = :uuid', {
-        uuid: uuid?.toLowerCase() || payload.user,
+        uuid: uuid.toLowerCase(),
       })
       .leftJoinAndSelect('user.chats', 'chats')
       .leftJoinAndSelect('chats.chat', 'chat')
@@ -154,15 +149,14 @@ export class UserService {
       .leftJoinAndSelect('chat.members', 'members')
       .leftJoinAndSelect('members.user', 'member_user')
       .getOne();
-    if (!user) return new NotFoundException('User Does Not Exist');
+    if (!user) throw new NotFoundException('User Not Found');
     else return user;
   }
 
   /**
-   * @description cron task firing every day at 00:00.00 to delete expired pending users
+   * Cron task firing every day at 00:00.00 to delete expired pending users
+   *
    * @returns Promise<void>
-   * @introduced 17.02.2021
-   * @edited 17.02.2021
    */
 
   @Cron('0 0 0 * * 1-7')

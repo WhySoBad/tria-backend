@@ -92,8 +92,14 @@ export interface IChat {
   banned: Array<IBannedMember>;
 }
 
-export interface IPrivateChat {
-  user: string;
+export interface IChatPreview {
+  uuid: string;
+  type: IChatType;
+  name: string | null;
+  tag: string | null;
+  description: string | null;
+  size: number;
+  online: number;
 }
 
 export interface IGroupChat {
@@ -105,6 +111,7 @@ export interface IGroupChat {
 }
 
 export interface ChatSocket<T> {
+  uuid: string;
   chat: string;
   data: T;
 }

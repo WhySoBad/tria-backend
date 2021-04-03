@@ -5,7 +5,7 @@ import { Socket } from 'socket.io';
 import { Repository } from 'typeorm';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
-import { DBResponse, HandleService } from '../../util/Types.type';
+import { DBResponse } from '../../util/Types.type';
 import { TokenPayload } from './Auth.interface';
 import { AuthService } from './Auth.service';
 
@@ -31,20 +31,24 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
     const token: string = client.handshake.headers['authorization']?.substr(7);
     if (!Boolean(token)) return client.error('No Token Provided');
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return client.error(payload.message);
-    const user: DBResponse<User> = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.uuid = :uuid', { uuid: payload.user })
-      .leftJoinAndSelect('user.chats', 'chat')
-      .getOne();
-    if (!user) return client.error('User Not Found');
-    await new Promise<void>((resolve) => {
-      user?.chats.forEach((member: ChatMember) => {
-        client.join(member.chatUuid.toString(), (err) => resolve());
+    try {
+      const payload: TokenPayload = await this.authService.verifyToken(token);
+      if (payload instanceof HttpException) return client.error(payload.message);
+      const user: DBResponse<User> = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.uuid = :uuid', { uuid: payload.user })
+        .leftJoinAndSelect('user.chats', 'chat')
+        .getOne();
+      if (!user) return client.error('User Not Found');
+      await new Promise<void>((resolve) => {
+        user?.chats.forEach((member: ChatMember) => {
+          client.join(member.chatUuid.toString(), (err) => resolve());
+        });
       });
-    });
-    await this.userRepository.save({ ...user, online: true });
+      await this.userRepository.save({ ...user, online: true });
+    } catch (exception) {
+      if (exception instanceof HttpException) client.error(exception.message);
+    }
   }
 
   /**
@@ -61,18 +65,22 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
       Object.values(client.nsp.sockets).map((socket: Socket) => socket.id)
     );
     const token: string = client.handshake.headers['authorization']?.substr(7);
-    const payload: HandleService<TokenPayload> = await this.authService.verifyToken(token);
-    if (payload instanceof HttpException) return;
-    else {
-      const user: DBResponse<User> = await this.userRepository
-        .createQueryBuilder('user')
-        .where('user.uuid = :uuid', { uuid: payload.user })
-        .getOne();
-      if (!user) {
-        client.error('User Not Found');
-        client.disconnect(true);
+    try {
+      const payload: TokenPayload = await this.authService.verifyToken(token);
+      if (payload instanceof HttpException) return;
+      else {
+        const user: DBResponse<User> = await this.userRepository
+          .createQueryBuilder('user')
+          .where('user.uuid = :uuid', { uuid: payload.user })
+          .getOne();
+        if (!user) {
+          client.error('User Not Found');
+          client.disconnect(true);
+        }
+        this.userRepository.save({ ...user, lastSeen: new Date(), online: false });
       }
-      this.userRepository.save({ ...user, lastSeen: new Date(), online: false });
+    } catch (exception) {
+      if (exception instanceof HttpException) client.error(exception.message);
     }
   }
 }

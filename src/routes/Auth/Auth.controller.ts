@@ -1,22 +1,14 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  HttpException,
-  Post,
-  Request,
-} from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
 import { User } from '../../entities/User.entity';
-import { HandleService } from '../../util/Types.type';
-import { ILogin } from './Auth.interface';
+import { ILogin, TokenPayload } from './Auth.interface';
 import { AuthService } from './Auth.service';
 import { v4 } from 'uuid';
+import Credentials from '../../decorators/Credentials.decorator';
+import Authorization from '../../decorators/Authorization.decorator';
+import AuthGuard from '../../guards/AuthGuard';
 
 /**
- * @description auth route to validate tokens, start handshake, login and logout users
- * @introduced 16.02.2021
- * @edited 17.02.2021
+ * Auth controller to validate tokens, start handshake, login and logout users
  */
 
 @Controller('auth')
@@ -24,55 +16,52 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   /**
+   * Route to validate a jwt
+   *
    * @param request request instance
-   * @description route to validate a JWT
-   * @returns Promise<void>
-   * @introduced 16.02.2021
-   * @edited 17.02.2021
+   *
+   * @returns Promise<boolean>
    */
 
   @Get('validate')
   async validate(@Request() request: Request): Promise<boolean> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    const payload = await this.authService.handleVerify(token.substr(7));
-    if (payload instanceof HttpException) throw payload;
-    else return !!payload;
+    return !!AuthService.DecodeToken(token.substr(7));
   }
 
   /**
-   * @param login request body of type ILogin
-   * @description route to login an user and generate a JWT
-   * @returns Promise<void>
-   * @introduced 16.02.2021
-   * @edited 17.02.2021
+   * Route to login an user and generate a JWT
+   *
+   * @param credentials credentials of the user
+   *
+   * @returns Promise<string>
    */
 
   @Post('login')
-  async login(@Body() login: ILogin): Promise<string> {
-    if (!login.username || !login.password) {
-      throw new BadRequestException('Missing Credentials');
+  async login(@Credentials() credentials: ILogin): Promise<string> {
+    try {
+      const user: User = await this.authService.handleLogin(credentials);
+      return AuthService.GenerateToken({
+        uuid: v4(),
+        user: user.uuid,
+      });
+    } catch (exception) {
+      throw exception;
     }
-    const user: HandleService<User> = await this.authService.handleLogin(login);
-    if (user instanceof HttpException) throw user;
-    return AuthService.GenerateToken({
-      uuid: v4(),
-      user: user.uuid,
-    });
   }
 
   /**
-   * @param request request instance
-   * @description route to logout an user and blacklist the JWT
+   * Route to logout an user and blacklist the JWT
+   *
+   * @param payload payload of user jwt
+   *
    * @returns Promise<void>
-   * @introduced 16.02.2021
-   * @edited 17.02.2021
    */
 
   @Get('logout')
-  async logout(@Request() request: Request): Promise<void> {
-    const token: string = request.headers['authorization' as keyof Headers]?.toString();
-    if (!token) throw new BadRequestException('No Token Provided');
-    await this.authService.handleLogout(token.substr(7));
+  @UseGuards(AuthGuard)
+  async logout(@Authorization() payload: TokenPayload): Promise<void> {
+    await this.authService.handleLogout(payload);
   }
 }
