@@ -40,6 +40,7 @@ axios
 
     socket.on('error', (err) => {
       console.log(err);
+      alert('Error');
     });
 
     socket.on('disconnect', () => {});
@@ -50,6 +51,7 @@ axios
     });
 
     socket.on('CHAT_EDIT', ({ chat, name, ...rest }) => {
+      console.log('chat edit', chat, name, rest);
       document.getElementById('group-name').innerHTML = name;
     });
 
@@ -65,7 +67,7 @@ axios
       console.log('Member Edited', member);
     });
 
-    socket.on('chatDelete', ({ chat }) => {
+    socket.on('CHAT_DELETE', ({ chat }) => {
       console.log('Chat Deleted', chat);
     });
 
@@ -96,6 +98,7 @@ axios
     });
 
     const chat = chatData?.data;
+    console.log(chat);
 
     chat.messages.forEach((message) => {
       createMessage(message.text, message.sender, message.createdAt, message.uuid);
@@ -108,6 +111,7 @@ function sendMessage() {
   const text = document.getElementById('inpt1').value;
   socket.emit('MESSAGE', {
     chat: chatUuid,
+    uuid: chatUuid,
     data: text,
   });
   document.getElementById('inpt1').value = '';
@@ -117,9 +121,8 @@ function changeName() {
   const text = document.getElementById('inpt2').value;
   socket.emit('CHAT_EDIT', {
     chat: chatUuid,
-    data: {
-      name: text,
-    },
+    uuid: chatUuid,
+    name: text,
   });
   document.getElementById('inpt2').value = '';
 }
@@ -135,14 +138,15 @@ function changeMessage() {
 }
 
 function editMember() {
-  const member = '0ceeb8d2-b286-4e6d-b449-67348a5c02f4';
+  //const member = '0ceeb8d2-b286-4e6d-b449-67348a5c02f4';
+  const member = 'f133d099-9750-416e-b38a-9b5b7b382896';
   const role = document.getElementById('inpt4').value;
   socket.emit('MEMBER_EDIT', {
     chat: chatUuid,
-    data: {
-      user: member,
-      role: role,
-    },
+    uuid: chatUuid,
+    user: member,
+    role: role,
+    permissions: ['KICK', 'EDIT'],
   });
   document.getElementById('inpt4').value = '';
 }

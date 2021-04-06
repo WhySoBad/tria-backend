@@ -1,14 +1,25 @@
-import { Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseFilters,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import Authorization from '../../decorators/Authorization.decorator';
-import PendingUser from '../../decorators/PendingUser.decorator';
-import UserDecorator from '../../decorators/User.decorator';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
+import { EditUser } from '../../pipes/validation/EditUser.pipe';
+import { RegisterUser } from '../../pipes/validation/RegisterUser.pipe';
 import { TokenPayload } from '../Auth/Auth.interface';
-import { IPendingUser, IUser } from './User.interface';
+import { IUser } from './User.interface';
 import { UserService } from './User.service';
 
 /**
@@ -27,7 +38,8 @@ export class UserController {
    */
 
   @Post('register')
-  async register(@PendingUser() user: IPendingUser): Promise<void> {
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async register(@Body() user: RegisterUser): Promise<void> {
     try {
       await this.userService.handleRegister(user);
     } catch (exception) {
@@ -66,8 +78,10 @@ export class UserController {
    */
 
   @Post('edit')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
-  async edit(@UserDecorator() user: IUser, @Authorization() payload: TokenPayload): Promise<void> {
+  async edit(@Body() user: EditUser, @Authorization() payload: TokenPayload): Promise<void> {
+    console.log(user);
     try {
       await this.userService.handleEdit(user, payload);
     } catch (exception) {

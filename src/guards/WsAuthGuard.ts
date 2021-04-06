@@ -1,11 +1,11 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { TokenPayload } from '../routes/Auth/Auth.interface';
-import { AuthService } from '../routes/Auth/Auth.service';
+import { JwtService } from '../routes/Auth/Jwt/Jwt.service';
 
 @Injectable()
 class WsAuthGuard implements CanActivate {
-  constructor(private authServce: AuthService) {}
+  constructor(private jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const socket: Socket = context.switchToHttp().getRequest();
@@ -14,12 +14,12 @@ class WsAuthGuard implements CanActivate {
       socket.error('Missing Token');
       return false;
     }
-    const payload: TokenPayload | undefined = AuthService.DecodeToken(token);
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) {
       socket.error('Invalid Token');
       return false;
     }
-    const banned: boolean = await this.authServce.isTokenBanned(payload.uuid);
+    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
     if (banned) {
       socket.error('Token Is Banned');
       return false;

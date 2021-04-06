@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   HttpException,
@@ -7,10 +8,10 @@ import {
   ParseUUIDPipe,
   Post,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import Authorization from '../../decorators/Authorization.decorator';
-import GroupChat from '../../decorators/GroupChat.decorator';
-import Uuid from '../../decorators/Uuid.decorator';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
@@ -19,6 +20,10 @@ import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
+import { BanMemberBody } from '../../pipes/validation/BanMemberBody.pipe';
+import { GroupChatBody } from '../../pipes/validation/GroupChatBody.pipe';
+import { KickMemberBody } from '../../pipes/validation/KickMemberBody.pipe';
+import { PrivateChatBody } from '../../pipes/validation/PrivateChatBody.pipe';
 import { DBResponse } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
 import {
@@ -44,19 +49,20 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param participant uuid of the participant
+   * @param body uuid of the participant
    *
    * @returns Promise<void>
    */
 
   @Post('create/private')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async createPrivate(
     @Authorization() payload: TokenPayload,
-    @Uuid() participant: string
+    @Body() body: PrivateChatBody
   ): Promise<void> {
     try {
-      await this.chatService.handlePrivateCreate(participant, payload);
+      await this.chatService.handlePrivateCreate(body.uuid, payload);
     } catch (exception) {
       throw exception;
     }
@@ -73,10 +79,11 @@ export class ChatController {
    */
 
   @Post('create/group')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async createGroup(
     @Authorization() payload: TokenPayload,
-    @GroupChat() chat: IGroupChat
+    @Body() chat: GroupChatBody
   ): Promise<void> {
     try {
       await this.chatService.handleGroupCreate(chat, payload);
@@ -161,20 +168,21 @@ export class ChatController {
    *
    * @param uuid uuid of Chat
    *
-   * @param user uuid of User to be banned
+   * @param body uuid of User to be banned
    *
    * @returns Promise<void>
    */
 
   @Post(':uuid/admin/ban')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async ban(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
-    @Uuid() user: string
+    @Body() body: BanMemberBody
   ): Promise<void> {
     try {
-      await this.chatService.handleBan(uuid, user, payload);
+      await this.chatService.handleBan(uuid, body.uuid, payload);
     } catch (exception) {
       throw exception;
     }
@@ -187,20 +195,21 @@ export class ChatController {
    *
    * @param uuid uuid of Chat
    *
-   * @param user uuid of User to be unbanned
+   * @param body uuid of User to be unbanned
    *
    * @returns Promise<void>
    */
 
   @Post(':uuid/admin/unban')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async unban(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
-    @Uuid() user: string
+    @Body() body: BanMemberBody
   ): Promise<void> {
     try {
-      await this.chatService.handleUnban(uuid, user, payload);
+      await this.chatService.handleUnban(uuid, body.uuid, payload);
     } catch (exception) {
       throw exception;
     }
@@ -213,20 +222,21 @@ export class ChatController {
    *
    * @param uuid uuid of Chat
    *
-   * @param user uuid of User
+   * @param body uuid of User
    *
    * @returns Promise<void>
    */
 
   @Post(':uuid/admin/kick')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async kick(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
-    @Uuid() user: string
+    @Body() body: KickMemberBody
   ): Promise<void> {
     try {
-      await this.chatService.handleKick(uuid, user, payload);
+      await this.chatService.handleKick(uuid, body.uuid, payload);
     } catch (exception) {
       throw exception;
     }

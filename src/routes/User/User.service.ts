@@ -4,10 +4,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PendingUser } from '../../entities/PendingUser.entity';
 import { User } from '../../entities/User.entity';
+import { EditUser } from '../../pipes/validation/EditUser.pipe';
+import { RegisterUser } from '../../pipes/validation/RegisterUser.pipe';
 import { DBResponse } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
-import { AuthService } from '../Auth/Auth.service';
-import { IPendingUser, IUser } from './User.interface';
+import { JwtService } from '../Auth/Jwt/Jwt.service';
 
 @Injectable()
 export class UserService {
@@ -25,9 +26,9 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handleRegister(settings: IPendingUser): Promise<void> {
+  async handleRegister(settings: RegisterUser): Promise<void> {
     let user: PendingUser = new PendingUser();
-    const hashed: string = await AuthService.Hash(settings.password);
+    const hashed: string = await JwtService.Hash(settings.password);
     user.name = settings.name;
     user.tag = settings.tag;
     user.mail = settings.mail.replace(' ', '');
@@ -79,14 +80,14 @@ export class UserService {
   /**
    * Functoin to edit an user
    *
-   * @param settings settings of type IUser
+   * @param settings data to be changed
    *
    * @param payload payload of the user jwt
    *
    * @returns Promise<void>
    */
 
-  async handleEdit(settings: IUser, payload: TokenPayload): Promise<void> {
+  async handleEdit(settings: EditUser, payload: TokenPayload): Promise<void> {
     const user: DBResponse<User> = await this.userRepository.findOne({
       uuid: payload.user,
     });

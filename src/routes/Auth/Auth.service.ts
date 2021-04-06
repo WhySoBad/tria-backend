@@ -1,19 +1,18 @@
 import {
   BadRequestException,
-  HttpException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { sign, verify } from 'jsonwebtoken';
-import { SHA256 } from 'crypto-js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../entities/User.entity';
-import { ILogin, TokenPayload } from './Auth.interface';
+import { TokenPayload } from './Auth.interface';
 import { DBResponse } from '../../util/Types.type';
 import { BlacklistToken } from '../../entities/BlacklistToken.entity';
 import { Cron } from '@nestjs/schedule';
+import { JwtService } from './Jwt/Jwt.service';
+import { Credentials } from '../../pipes/validation/Credentials.pipe';
 
 @Injectable()
 export class AuthService {
@@ -21,89 +20,22 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(BlacklistToken)
-    private blacklistRepository: Repository<BlacklistToken>
+    private blacklistRepository: Repository<BlacklistToken>,
+    private jwtService: JwtService
   ) {}
 
   /**
-   * Function to generate a 90d valid jwt for a specific payload
+   * Function to validate a jwt
    *
-   * @param payload paylod to be stored in token
-   *
-   * @returns Promise<string>
-   */
-
-  public static GenerateToken(payload: object | string | Buffer): string {
-    if (typeof payload == 'object') JSON.stringify(payload);
-    return sign(payload, process.env.TOKEN_SECRET || '', {
-      algorithm: 'HS256',
-      expiresIn: '90d',
-    });
-  }
-
-  /**
-   * Function to hash text with SHA256 algorithm
-   *
-   * @param text text to be hashed
-   *
-   * @returns Promise<string>
-   */
-
-  public static async Hash(text: string): Promise<string> {
-    return SHA256(text as string).toString();
-  }
-
-  /**
-   * Function to decode a jwt
-   *
-   * Important: This function doesn't check whether the token is banned or not
-   *
-   * @param token token to be decoded
-   *
-   * @returns TokenPayload | undefined
-   */
-
-  public static DecodeToken(token: string): TokenPayload | undefined {
-    try {
-      return verify(token.replace('Bearer ', ''), process.env.TOKEN_SECRET || '') as any;
-    } catch (err) {
-      return undefined;
-    }
-  }
-
-  /**
-   * Function to verify a token
-   *
-   * Important: This function additionally checks whether the token is banned or not
-   *
-   * @param token token to be verified
-   *
-   * @returns Promise<TokenPayload>
-   */
-
-  public async verifyToken(token: string): Promise<TokenPayload> {
-    const payload: TokenPayload | undefined = AuthService.DecodeToken(token);
-    if (!payload) throw new BadRequestException('Invalid Token');
-    else {
-      const banned: DBResponse<BlacklistToken> = await this.blacklistRepository.findOne({
-        uuid: payload.uuid,
-      });
-      if (banned) throw new UnauthorizedException('Token Is Banned');
-      else return payload;
-    }
-  }
-
-  /**
-   * Function to check whether a token is banned or not
-   *
-   * @param uuid uuid of the token
+   * @param token current user token
    *
    * @returns Promise<boolean>
    */
 
-  public async isTokenBanned(uuid: string): Promise<boolean> {
-    return !!(await this.blacklistRepository.findOne({
-      uuid: uuid,
-    }));
+  async handleValidate(token: string): Promise<boolean> {
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+    if (!payload) return false;
+    return !(await this.jwtService.isTokenBanned(payload.uuid));
   }
 
   /**
@@ -114,12 +46,12 @@ export class AuthService {
    * @returns Promise<User>
    */
 
-  async handleLogin({ username, password }: ILogin): Promise<User> {
+  async handleLogin({ username, password }: Credentials): Promise<User> {
     const user: DBResponse<User> = await this.userRepository.findOne({
       mail: username,
     });
     if (!user) throw new NotFoundException('User Not Found');
-    const hashed: string = await AuthService.Hash(password);
+    const hashed: string = await JwtService.Hash(password);
     if (hashed === user.password) return user;
     else throw new BadRequestException('Invalid Credentials');
   }
@@ -140,11 +72,9 @@ export class AuthService {
       uuid: payload.user,
     });
     if (!user) throw new NotFoundException('User Not Found');
-    const banned: DBResponse<BlacklistToken> = await this.blacklistRepository.findOne({
-      uuid: uuid,
-    });
+    const banned: boolean = await this.jwtService.isTokenBanned(uuid);
     if (banned) throw new UnauthorizedException('Token Is Banned');
-    let blacklistToken: BlacklistToken = new BlacklistToken();
+    const blacklistToken: BlacklistToken = new BlacklistToken();
     blacklistToken.uuid = uuid;
     blacklistToken.expires = new Date(exp * 1000);
     await this.blacklistRepository.save(blacklistToken);

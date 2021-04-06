@@ -1,11 +1,22 @@
-import { BadRequestException, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Request,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { User } from '../../entities/User.entity';
-import { ILogin, TokenPayload } from './Auth.interface';
+import { TokenPayload } from './Auth.interface';
 import { AuthService } from './Auth.service';
 import { v4 } from 'uuid';
-import Credentials from '../../decorators/Credentials.decorator';
 import Authorization from '../../decorators/Authorization.decorator';
 import AuthGuard from '../../guards/AuthGuard';
+import { JwtService } from './Jwt/Jwt.service';
+import { Credentials } from '../../pipes/validation/Credentials.pipe';
 
 /**
  * Auth controller to validate tokens, start handshake, login and logout users
@@ -13,7 +24,7 @@ import AuthGuard from '../../guards/AuthGuard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private JwtService: JwtService) {}
 
   /**
    * Route to validate a jwt
@@ -27,7 +38,11 @@ export class AuthController {
   async validate(@Request() request: Request): Promise<boolean> {
     const token: string = request.headers['authorization' as keyof Headers]?.toString();
     if (!token) throw new BadRequestException('No Token Provided');
-    return !!AuthService.DecodeToken(token.substr(7));
+    try {
+      return await this.authService.handleValidate(token.substr(7));
+    } catch (exception) {
+      return false;
+    }
   }
 
   /**
@@ -39,10 +54,11 @@ export class AuthController {
    */
 
   @Post('login')
-  async login(@Credentials() credentials: ILogin): Promise<string> {
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async login(@Body() credentials: Credentials): Promise<string> {
     try {
       const user: User = await this.authService.handleLogin(credentials);
-      return AuthService.GenerateToken({
+      return JwtService.GenerateToken({
         uuid: v4(),
         user: user.uuid,
       });

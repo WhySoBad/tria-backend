@@ -1,7 +1,6 @@
 import { BadRequestException, createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { verify } from 'jsonwebtoken';
 import { TokenPayload } from '../routes/Auth/Auth.interface';
-import { AuthService } from '../routes/Auth/Auth.service';
+import { JwtService } from '../routes/Auth/Jwt/Jwt.service';
 
 /**
  * Authorization decorator
@@ -14,11 +13,16 @@ import { AuthService } from '../routes/Auth/Auth.service';
  */
 
 const Authorization = createParamDecorator(
-  (data: unknown, context: ExecutionContext): TokenPayload => {
-    const request: Request = context.switchToHttp().getRequest();
-    const token: string = (request.headers as any).authorization;
+  (_: unknown, context: ExecutionContext): TokenPayload => {
+    let token;
+    if (context.getType() == 'http') {
+      token = context.switchToHttp().getRequest().headers.authorization;
+    } else if (context.getType() == 'ws') {
+      token = context.switchToHttp().getRequest().handshake.headers.authorization;
+    }
+    token?.replace('Bearer ', '');
     if (!token) throw new BadRequestException('Missing Token');
-    const payload: TokenPayload | undefined = AuthService.DecodeToken(token);
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
     else return payload;
   }

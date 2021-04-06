@@ -6,20 +6,25 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { TokenPayload } from '../routes/Auth/Auth.interface';
-import { AuthService } from '../routes/Auth/Auth.service';
+import { JwtService } from '../routes/Auth/Jwt/Jwt.service';
 
 @Injectable()
 class AuthGuard implements CanActivate {
-  constructor(private authService: AuthService) {}
+  constructor(private jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request: Request = context.switchToHttp().getRequest();
-    const token: string = (request.headers as any).authorization;
-    if (!token) throw new BadRequestException('Missing Token');
-    const payload: TokenPayload | undefined = AuthService.DecodeToken(token);
-    if (!payload) throw new BadRequestException('Invalid Token');
-    const banned: boolean = await this.authService.isTokenBanned(payload.uuid);
-    if (banned) throw new UnauthorizedException('Token Is Banned');
+    let token;
+    if (context.getType() == 'http') {
+      token = context.switchToHttp().getRequest().headers.authorization;
+    } else if (context.getType() == 'ws') {
+      token = context.switchToHttp().getRequest().handshake.headers.authorization;
+    }
+    token?.replace('Bearer ', '');
+    if (!token) return false;
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+    if (!payload) return false;
+    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
+    if (banned) return false;
     else return true;
   }
 }

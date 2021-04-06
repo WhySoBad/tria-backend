@@ -1,50 +1,42 @@
-import { HttpException, UseFilters, UseGuards } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
-  ConnectedSocket,
-  SubscribeMessage,
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets';
+  BadRequestException,
+  Body,
+  forwardRef,
+  Inject,
+  Injectable,
+  UseFilters,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Repository } from 'typeorm';
-import WsAuthorization from '../../decorators/WsAuthorization.decorator';
-import MessageDecorator from '../../decorators/Message.decorator';
-import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
-import WsAuthGuard from '../../guards/WsAuthGuard';
-import { DBResponse } from '../../util/Types.type';
 import { TokenPayload } from '../Auth/Auth.interface';
-import { AuthService } from '../Auth/Auth.service';
-import {
-  ChatEvent,
-  ChatSocket,
-  IAdminPermission,
-  IChatEdit,
-  IChatRole,
-  IChatType,
-  IMemberEdit,
-  IMessageEdit,
-} from './Chat.interface';
+import { ChatEvent, IChatRole } from './Chat.interface';
 import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
-import ChatEdit from '../../decorators/ChatEdit.decorator';
-import MemberEdit from '../../decorators/MemberEdit.decorator';
-import MessageEdit from '../../decorators/MessageEdit.decorator';
+import { JwtService } from '../Auth/Jwt/Jwt.service';
+import { ChatService } from './Chat.service';
+import { MessageSocket } from '../../pipes/validation/MessageSocket.pipe';
+import Authorization from '../../decorators/Authorization.decorator';
+import AuthGuard from '../../guards/AuthGuard';
+import { ChatEditSocket } from '../../pipes/validation/ChatEditSocket.pipe';
+import { MessageEditSocket } from '../../pipes/validation/MessageEditSocket.pipe';
+import { MemberEditSocket } from '../../pipes/validation/MemberEditSocket.pipe';
 
 @WebSocketGateway()
+@Injectable()
 export class ChatGateway {
   constructor(
     @InjectRepository(Chat) private chatRepository: Repository<Chat>,
-    @InjectRepository(ChatMember) private chatMemberRepository: Repository<ChatMember>,
-    @InjectRepository(ChatAdmin) private chatAdminRepository: Repository<ChatAdmin>,
-    @InjectRepository(Message) private messageRepository: Repository<Message>,
-    @InjectRepository(AdminPermission)
-    private adminPermissionRepository: Repository<AdminPermission>,
-    private authService: AuthService
+    @Inject(forwardRef(() => ChatService)) private chatService: ChatService,
+    private jwtService: JwtService
   ) {}
 
   @WebSocketServer() server: Server;
@@ -54,48 +46,33 @@ export class ChatGateway {
    *
    * @param payload payload of user jwt
    *
-   * @param client websocket instance
-   *
    * @param body body of the websocket
    *
    * @returns Promise<void>
    */
 
   @SubscribeMessage(ChatEvent.MESSAGE)
-  @UseGuards(WsAuthGuard)
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseFilters(WsExceptionFilter)
   async handleMessage(
-    @WsAuthorization() payload: TokenPayload,
-    @ConnectedSocket() client: Socket,
-    @MessageDecorator() body: ChatSocket<string>
+    @Authorization() payload: TokenPayload,
+    @Body() body: MessageSocket
   ): Promise<void> {
-    const chat: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder('chat')
-      .where('chat.uuid = :uuid', { uuid: body.chat })
-      .leftJoinAndSelect('chat.members', 'member')
-      .getOne();
-    if (!chat) return client.error('Chat Not Found');
-    const member: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!member) return client.error('User Not Found In Chat');
-
-    const message: Message = new Message();
-    message.chatUuid = chat.uuid;
-    message.userUuid = member.userUuid;
-    message.text = body.data;
-
-    await this.messageRepository.save(message);
-
-    this.server.to(body.chat).emit(ChatEvent.MESSAGE, {
-      uuid: message.uuid,
-      chat: message.chatUuid,
-      sender: message.userUuid,
-      createdAt: message.createdAt,
-      editedAt: message.editedAt,
-      pinned: message.pinned,
-      text: message.text,
-    });
+    try {
+      const message: Message = await this.chatService.handleMessage(body.chat, body.data, payload);
+      this.server.to(body.chat).emit(ChatEvent.MESSAGE, {
+        uuid: message.uuid,
+        chat: message.chatUuid,
+        sender: message.userUuid,
+        createdAt: message.createdAt,
+        editedAt: message.editedAt,
+        pinned: message.pinned,
+        text: message.text,
+      });
+    } catch (exception) {
+      throw exception;
+    }
   }
 
   /**
@@ -105,64 +82,29 @@ export class ChatGateway {
    *
    * @param body body of the websocket
    *
-   * @param client websocket instance
-   *
    * @returns Promise<void>
    */
 
   @SubscribeMessage(ChatEvent.CHAT_EDIT)
-  @UseGuards(WsAuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @UseGuards(AuthGuard)
+  @UseFilters(WsExceptionFilter)
   async handleChatEdit(
-    @WsAuthorization() payload: TokenPayload,
-    @ChatEdit() { data: { description, tag, name, type }, ...body }: ChatSocket<IChatEdit>,
-    @ConnectedSocket() client: Socket
+    @Authorization() payload: TokenPayload,
+    @Body() body: ChatEditSocket
   ): Promise<void> {
-    const chat: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder('chat')
-      .where('chat.uuid = :uuid', { uuid: body.chat })
-      .leftJoinAndSelect('chat.members', 'members')
-      .leftJoinAndSelect('chat.admins', 'admins')
-      .leftJoinAndSelect('admins.permissions', 'permissions')
-      .getOne();
-    if (!chat) return client.error('Chat Not Found');
-    if (chat.type == IChatType.PRIVATE) return client.error('Chat Has To Be Group');
-
-    const existing: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder()
-      .where('LOWER(tag) = LOWER(:tag)', { tag: tag })
-      .getOne();
-    if (existing) return client.error('Group Tag Has To Be Unique');
-
-    const user: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!user) return client.error('User Not Found');
-    if (user.role == IChatRole.MEMBER) return client.error('Lacking Permissions');
-    if (user.role == IChatRole.ADMIN) {
-      const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-        return admin.userUuid == user.userUuid;
+    try {
+      const chat: Chat = await this.chatService.handleChatEdit(body.chat, body, payload);
+      this.server.to(body.chat).emit(ChatEvent.CHAT_EDIT, {
+        chat: body.chat,
+        tag: chat.tag,
+        name: chat.name,
+        description: chat.description,
+        type: chat.type,
       });
-      if (!admin) return client.error('Admin Not Found');
-      if (!admin.permissions.find((p: AdminPermission) => p.permission == IAdminPermission.EDIT)) {
-        return client.error('Lacking Permissions');
-      }
+    } catch (exception) {
+      throw exception;
     }
-
-    await this.chatRepository.save({
-      ...chat,
-      tag: tag || chat.tag,
-      name: name || chat.name,
-      description: description || chat.description,
-      type: (type && IChatType[type]) || chat.type,
-    });
-
-    this.server.to(body.chat).emit(ChatEvent.CHAT_EDIT, {
-      chat: body.chat,
-      tag: tag || chat.tag,
-      name: name || chat.name,
-      description: description || chat.description,
-      type: (type && IChatType[type]) || chat.type,
-    });
   }
 
   /**
@@ -172,51 +114,30 @@ export class ChatGateway {
    *
    * @param body body of the websocket
    *
-   * @param client websocket instance
-   *
    * @returns Promise<void>
    */
 
   @SubscribeMessage(ChatEvent.MESSAGE_EDIT)
-  @UseGuards(WsAuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @UseGuards(AuthGuard)
+  @UseFilters(WsExceptionFilter)
   async handleMessageEdit(
-    @WsAuthorization() payload: TokenPayload,
-    @MessageEdit() body: IMessageEdit,
-    @ConnectedSocket() client: Socket
+    @Authorization() payload: TokenPayload,
+    @Body() body: MessageEditSocket
   ): Promise<void> {
-    const message: DBResponse<Message> = await this.messageRepository
-      .createQueryBuilder('message')
-      .where('message.uuid = :uuid', { uuid: body.message })
-      .leftJoinAndSelect('message.chat', 'chat')
-      .leftJoinAndSelect('chat.members', 'member')
-      .leftJoinAndSelect('member.user', 'user')
-      .getOne();
-    if (!message) return client.error('Message Not Found');
-
-    const user: DBResponse<ChatMember> = message.chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!user) return client.error('User Not Found');
-    if (user.userUuid != message.userUuid) return client.error('Only Creator Can Edit Message');
-
-    const editedMessage: Message = {
-      ...message,
-      text: body.text || message.text,
-      pinned: body.pinned != null ? body.pinned : message.pinned,
-      edited: message.edited + (body.text && body.text != message.text ? 1 : 0),
-      editedAt: body.text && body.text != message.text ? new Date() : message.editedAt,
-    };
-
-    await this.messageRepository.save(editedMessage);
-
-    this.server.to(editedMessage.chatUuid).emit(ChatEvent.MESSAGE_EDIT, {
-      chat: editedMessage.chatUuid,
-      message: editedMessage.uuid,
-      text: editedMessage.text,
-      pinned: editedMessage.pinned,
-      edited: editedMessage.edited,
-      editedAt: editedMessage.editedAt,
-    });
+    try {
+      const message: Message = await this.chatService.handleMessageEdit(body, payload);
+      this.server.to(message.chatUuid).emit(ChatEvent.MESSAGE_EDIT, {
+        chat: message.chatUuid,
+        message: message.uuid,
+        text: message.text,
+        pinned: message.pinned,
+        edited: message.edited,
+        editedAt: message.editedAt,
+      });
+    } catch (exception) {
+      throw exception;
+    }
   }
 
   /**
@@ -232,126 +153,46 @@ export class ChatGateway {
    */
 
   @SubscribeMessage(ChatEvent.MEMBER_EDIT)
-  @UseGuards(WsAuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @UseGuards(AuthGuard)
+  @UseFilters(WsExceptionFilter)
   async handleMemberEdit(
-    @WsAuthorization() payload: TokenPayload,
-    @MemberEdit() body: ChatSocket<IMemberEdit>,
-    @ConnectedSocket() client: Socket
+    @Authorization() payload: TokenPayload,
+    @Body() body: MemberEditSocket
   ): Promise<void> {
-    const chat: DBResponse<Chat> = await this.chatRepository
-      .createQueryBuilder('chat')
-      .where('chat.uuid = :uuid', { uuid: body.chat })
-      .leftJoinAndSelect('chat.members', 'members')
-      .leftJoinAndSelect('members.user', 'user')
-      .leftJoinAndSelect('chat.banned', 'banned')
-      .leftJoinAndSelect('chat.admins', 'admins')
-      .leftJoinAndSelect('admins.permissions', 'permissions')
-      .getOne();
+    console.log(body);
+    try {
+      const member:
+        | Array<ChatMember>
+        | ChatMember
+        | ChatAdmin = await this.chatService.handleMemberEdit(body.chat, body, payload);
 
-    if (!chat) return client.error('Chat Not Found');
-    if (chat.type == IChatType.PRIVATE) return client.error('Chat Has To Be Group');
-
-    const user: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == payload.user;
-    });
-    if (!user) return client.error('User Not Found');
-    if (user.role == IChatRole.MEMBER) {
-      return client.error('Lacking Permissions');
-    }
-
-    const member: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
-      return member.userUuid == body.data.user;
-    });
-    if (!member) return client.error('User Not Found');
-    if (member.role == IChatRole.OWNER) return client.error("Owner Can't Be Edited");
-
-    if (user.role === IChatRole.ADMIN) {
-      const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-        return admin.userUuid == payload.user;
-      });
-      if (!admin) return client.error('Admin Not Found');
-      const canEdit: DBResponse<any> = admin.permissions.find((permission: AdminPermission) => {
-        return permission.permission == IAdminPermission.USERS;
-      });
-      if (!canEdit) return client.error('Lacking Permissions');
-      if (body.data.role == IChatRole.OWNER) {
-        return client.error("Admin Can't Change Owner");
-      }
-    }
-
-    if (body.data.role === IChatRole.OWNER) {
-      await this.chatMemberRepository.save({ ...user, role: IChatRole.MEMBER });
-      await this.chatMemberRepository.save({ ...member, role: IChatRole.OWNER });
-      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
-        chat: chat.uuid,
-        user: user.userUuid,
-        role: IChatRole[IChatRole.MEMBER],
-        permissions: [],
-      });
-      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
-        chat: chat.uuid,
-        user: member.userUuid,
-        role: IChatRole[IChatRole.OWNER],
-        permissions: [],
-      });
-    }
-
-    if (body.data.role === IChatRole.ADMIN) {
-      if (member.role === IChatRole.ADMIN) {
-        const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-          return admin.userUuid == body.data.user;
+      if (member instanceof ChatAdmin) {
+        this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
+          chat: body.chat,
+          user: member.userUuid,
+          role: 'ADMIN',
+          permissions: member.permissions,
         });
-        if (!admin) {
-          await this.chatMemberRepository.save({ ...member, role: IChatRole.MEMBER });
-          return client.error('Admin Not Found');
-        }
-        await this.chatAdminRepository.save({
-          ...admin,
-          permissions: await Promise.all(
-            body.data.permissions.map(async (perm: IAdminPermission) => {
-              const permission: AdminPermission = new AdminPermission();
-              permission.permission = IAdminPermission[perm] as any;
-              await this.adminPermissionRepository.save(permission);
-              return permission;
-            })
-          ),
+      } else if (Array.isArray(member)) {
+        member.forEach((member: ChatMember) => {
+          this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
+            chat: body.chat,
+            user: member.userUuid,
+            role: IChatRole[member.role],
+            permissions: [],
+          });
         });
       } else {
-        const admin: ChatAdmin = new ChatAdmin();
-        admin.chat = chat;
-        admin.user = member.user;
-        admin.permissions = [
-          ...body.data.permissions.map((perm: IAdminPermission) => {
-            const permission: AdminPermission = new AdminPermission();
-            permission.permission = perm;
-            return permission;
-          }),
-        ];
-        await this.chatMemberRepository.save({ ...member, role: IChatRole.ADMIN });
-        await this.chatAdminRepository.save(admin);
+        this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
+          chat: body.chat,
+          user: member.userUuid,
+          role: IChatRole[member.role],
+          permissions: [],
+        });
       }
-      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
-        chat: chat.uuid,
-        user: member.userUuid,
-        role: IChatRole[IChatRole.ADMIN],
-        permissions: [body.data.permissions],
-      });
-    }
-
-    if (body.data.role === IChatRole.MEMBER) {
-      if (member.role === IChatRole.MEMBER) return;
-      const admin: DBResponse<ChatAdmin> = chat.admins.find((admin: ChatAdmin) => {
-        return admin.userUuid == body.data.user;
-      });
-      if (!admin) return client.error('Admin Not Found');
-      await this.chatAdminRepository.remove(admin);
-      await this.chatMemberRepository.save({ ...member, role: IChatRole.MEMBER });
-      this.server.to(chat.uuid).emit(ChatEvent.MEMBER_EDIT, {
-        chat: chat.uuid,
-        user: member.userUuid,
-        role: IChatRole[IChatRole.MEMBER],
-        permissions: [],
-      });
+    } catch (exception) {
+      throw exception;
     }
   }
 
@@ -393,19 +234,19 @@ export class ChatGateway {
       const client: Socket = sockets[socket];
       const clientToken: string = client.handshake.headers['authorization']?.substr(7);
       if (clientToken) {
-        const clientPayload: TokenPayload | undefined = AuthService.DecodeToken(clientToken);
+        const clientPayload: TokenPayload | undefined = JwtService.DecodeToken(clientToken);
         if (clientPayload?.user == payload.uuid) client.join(chatUuid);
       }
     }
 
-    const chat: DBResponse<Chat> = await this.chatRepository
+    const chat: Chat | undefined = await this.chatRepository
       .createQueryBuilder('chat')
       .where('chat.uuid = :uuid', { uuid: chatUuid })
       .leftJoinAndSelect('chat.members', 'member')
       .leftJoinAndSelect('member.user', 'user')
       .getOne();
     if (!chat) return; //maybe error message
-    const member: DBResponse<ChatMember> = chat?.members.find((member: ChatMember) => {
+    const member: ChatMember | undefined = chat.members.find((member: ChatMember) => {
       return member.userUuid == userUuid;
     });
     if (!member) return; //maybe error message
@@ -452,7 +293,7 @@ export class ChatGateway {
       const client: Socket = sockets[socket];
       const clientToken: string = client.handshake.headers['authorization']?.substr(7);
       if (clientToken) {
-        const clientPayload: TokenPayload | undefined = AuthService.DecodeToken(clientToken);
+        const clientPayload: TokenPayload | undefined = JwtService.DecodeToken(clientToken);
         if (clientPayload?.user == payload.uuid) client.leave(chatUuid);
       }
     }
@@ -471,19 +312,22 @@ export class ChatGateway {
    * @returns Promise<void>
    */
 
+  @UseFilters(WsExceptionFilter)
   async handleGroupUserBan(chatUuid: string, userUuid: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
       const token: string = client.handshake.headers['authorization']?.substr(7);
       try {
-        const payload: TokenPayload = await this.authService.verifyToken(token);
-        if (!payload || payload instanceof HttpException) return; //maybe error message -> to who (?)
+        const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+        if (!payload) throw new BadRequestException('Invalid Token');
+        const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
+        if (banned) throw new BadRequestException('Token Is Banned');
         if (payload.user == userUuid) client.leave(chatUuid);
 
         this.server.to(chatUuid).emit(ChatEvent.MEMBER_BANNED, { chat: chatUuid, user: userUuid });
       } catch (exception) {
-        if (exception instanceof HttpException) client.error(exception.message);
+        throw exception;
       }
     }
   }
