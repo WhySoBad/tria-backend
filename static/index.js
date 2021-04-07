@@ -86,7 +86,7 @@ axios
     console.log(token);
 
     const user = await axios
-      .get(`${url}/user/get`, {
+      .get(`${url}/user/current`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .catch((err) => {
@@ -110,7 +110,7 @@ axios
 function sendMessage() {
   const text = document.getElementById('inpt1').value;
   socket.emit('MESSAGE', {
-    chat: chatUuid,
+    //chat: chatUuid,
     uuid: chatUuid,
     data: text,
   });
@@ -153,7 +153,7 @@ function editMember() {
 
 async function createMessage(text, sender, createdAt, uuid) {
   const messages = document.getElementById('message-container');
-  const data = await axios.get(`${url}/user/get/${sender}`, {
+  const data = await axios.get(`${url}/user/${sender}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const user = data.data;

@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { IChatRole } from '../routes/Chat/Chat.interface';
+import { IChatRole } from '../modules/Chat/Chat.interface';
 import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 

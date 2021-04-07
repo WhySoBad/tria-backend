@@ -1,5 +1,5 @@
 import { Column, Entity, JoinColumn, JoinTable, ManyToOne, PrimaryColumn } from 'typeorm';
-import { IAdminPermission } from '../routes/Chat/Chat.interface';
+import { IAdminPermission } from '../modules/Chat/Chat.interface';
 import { ChatAdmin } from './ChatAdmin.entity';
 
 @Entity()

@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class EditUser {
   @IsOptional()
@@ -12,10 +12,6 @@ export class EditUser {
   @IsOptional()
   @IsString()
   readonly description: string;
-
-  @IsOptional()
-  @IsUrl()
-  readonly avatar: string;
 
   @IsOptional()
   @IsString()

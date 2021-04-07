@@ -1,6 +1,6 @@
 import { BadRequestException, createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { TokenPayload } from '../routes/Auth/Auth.interface';
-import { JwtService } from '../routes/Auth/Jwt/Jwt.service';
+import { TokenPayload, TokenType } from '../modules/Auth/Jwt/Jwt.interface';
+import { JwtService } from '../modules/Auth/Jwt/Jwt.service';
 
 /**
  * Authorization decorator

@@ -8,7 +8,6 @@ import {
   ParseUUIDPipe,
   Post,
   UseGuards,
-  UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import Authorization from '../../decorators/Authorization.decorator';
@@ -25,7 +24,7 @@ import { GroupChatBody } from '../../pipes/validation/GroupChatBody.pipe';
 import { KickMemberBody } from '../../pipes/validation/KickMemberBody.pipe';
 import { PrivateChatBody } from '../../pipes/validation/PrivateChatBody.pipe';
 import { DBResponse } from '../../util/Types.type';
-import { TokenPayload } from '../Auth/Auth.interface';
+import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import {
   IAdminPermission,
   IChat,
@@ -55,7 +54,6 @@ export class ChatController {
    */
 
   @Post('create/private')
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async createPrivate(
     @Authorization() payload: TokenPayload,
@@ -79,7 +77,6 @@ export class ChatController {
    */
 
   @Post('create/group')
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async createGroup(
     @Authorization() payload: TokenPayload,
@@ -174,7 +171,6 @@ export class ChatController {
    */
 
   @Post(':uuid/admin/ban')
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async ban(
     @Authorization() payload: TokenPayload,
@@ -201,7 +197,6 @@ export class ChatController {
    */
 
   @Post(':uuid/admin/unban')
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async unban(
     @Authorization() payload: TokenPayload,
@@ -228,7 +223,6 @@ export class ChatController {
    */
 
   @Post(':uuid/admin/kick')
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
   async kick(
     @Authorization() payload: TokenPayload,

@@ -1,5 +1,5 @@
 import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { IChatType } from '../routes/Chat/Chat.interface';
+import { IChatType } from '../modules/Chat/Chat.interface';
 import { BannedMember } from './BannedMember.entity';
 import { ChatAdmin } from './ChatAdmin.entity';
 import { ChatMember } from './ChatMember.entity';

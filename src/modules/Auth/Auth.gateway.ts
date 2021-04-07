@@ -16,7 +16,7 @@ import { Socket } from 'socket.io';
 import { Repository } from 'typeorm';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
-import { TokenPayload } from './Auth.interface';
+import { TokenPayload } from './Jwt/Jwt.interface';
 import { JwtService } from './Jwt/Jwt.service';
 
 @WebSocketGateway()

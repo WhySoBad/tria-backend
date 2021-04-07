@@ -9,16 +9,6 @@ export class PendingUser {
 
   @Column({ type: 'timestamp' }) expires: Date = new Date(new Date().getTime() + 604800000);
 
-  @Column('text') name: string;
-
-  @Column('text') tag: string;
-
-  @Column('text') description: string;
-
-  @Column('text') avatar: string;
-
-  @Column('text') locale: string;
-
   @Column('text') mail: string;
 
   @Column('text') password: string;

@@ -1,9 +1,11 @@
-import { IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
 
 export class ChatEditSocket {
+  @IsNotEmpty()
   @IsUUID(4)
   readonly uuid: string;
 
+  @IsNotEmpty()
   @IsUUID(4)
   readonly chat: string;
 

@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class Credentials {
+export class UserPasswordResetConfirm {
   @IsNotEmpty()
   @IsString()
-  readonly username: string;
+  readonly token: string;
 
   @IsNotEmpty()
   @IsString()

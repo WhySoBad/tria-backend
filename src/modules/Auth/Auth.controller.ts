@@ -6,17 +6,15 @@ import {
   Post,
   Request,
   UseGuards,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { User } from '../../entities/User.entity';
-import { TokenPayload } from './Auth.interface';
 import { AuthService } from './Auth.service';
 import { v4 } from 'uuid';
 import Authorization from '../../decorators/Authorization.decorator';
 import AuthGuard from '../../guards/AuthGuard';
 import { JwtService } from './Jwt/Jwt.service';
 import { Credentials } from '../../pipes/validation/Credentials.pipe';
+import { TokenPayload, TokenType } from './Jwt/Jwt.interface';
 
 /**
  * Auth controller to validate tokens, start handshake, login and logout users
@@ -54,14 +52,17 @@ export class AuthController {
    */
 
   @Post('login')
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   async login(@Body() credentials: Credentials): Promise<string> {
     try {
       const user: User = await this.authService.handleLogin(credentials);
-      return JwtService.GenerateToken({
-        uuid: v4(),
-        user: user.uuid,
-      });
+      return JwtService.GenerateToken(
+        {
+          uuid: v4(),
+          user: user.uuid,
+          type: TokenType.AUTH,
+        },
+        TokenType.AUTH
+      );
     } catch (exception) {
       throw exception;
     }

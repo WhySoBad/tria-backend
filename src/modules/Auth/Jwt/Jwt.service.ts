@@ -5,7 +5,7 @@ import { sign, verify } from 'jsonwebtoken';
 import { Repository } from 'typeorm';
 import { config } from '../../../config';
 import { BlacklistToken } from '../../../entities/BlacklistToken.entity';
-import { TokenPayload } from '../Auth.interface';
+import { TokenPayload, TokenType } from './Jwt.interface';
 
 @Injectable()
 export class JwtService {
@@ -21,11 +21,23 @@ export class JwtService {
    * @returns Promise<string>
    */
 
-  public static GenerateToken(payload: object | string | Buffer): string {
+  public static GenerateToken(payload: object | string | Buffer, type: TokenType): string {
+    const SECRETS: { [key: string]: string } = {
+      REGISTER: process.env.REGISTER_TOKEN_SECRET || '',
+      PASSWORD_RESET: process.env.RESET_TOKEN_SECRET || '',
+      AUTH: process.env.AUTH_TOKEN_SECRET || '',
+    };
+
+    const DURATIONS: { [key: string]: string } = {
+      REGISTER: config.registerTokenExpires,
+      PASSWORD_RESET: config.resetTokenExpires,
+      AUTH: config.authTokenExpires,
+    };
+
     if (typeof payload == 'object') JSON.stringify(payload);
-    return sign(payload, process.env.TOKEN_SECRET || '', {
+    return sign(payload, SECRETS[type], {
       algorithm: 'HS256',
-      expiresIn: config.tokenExpires,
+      expiresIn: DURATIONS[type],
     });
   }
 
@@ -36,12 +48,22 @@ export class JwtService {
    *
    * @param token token to be decoded
    *
+   * @param type type of the token [default = TokenType.AUTH]
+   *
    * @returns TokenPayload | undefined
    */
 
-  public static DecodeToken(token: string): TokenPayload | undefined {
+  public static DecodeToken(
+    token: string,
+    type: TokenType = TokenType.AUTH
+  ): TokenPayload | undefined {
+    const SECRETS: { [key: string]: string } = {
+      REGISTER: process.env.REGISTER_TOKEN_SECRET || '',
+      PASSWORD_RESET: process.env.RESET_TOKEN_SECRET || '',
+      AUTH: process.env.AUTH_TOKEN_SECRET || '',
+    };
     try {
-      return verify(token.replace('Bearer ', ''), process.env.TOKEN_SECRET || '') as any;
+      return verify(token.replace('Bearer ', ''), SECRETS[type] || '') as any;
     } catch (err) {
       return undefined;
     }

@@ -1,6 +1,7 @@
-import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class MessageEditSocket {
+  @IsNotEmpty()
   @IsUUID(4)
   readonly message: string;
 

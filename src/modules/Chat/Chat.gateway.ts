@@ -18,7 +18,7 @@ import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
-import { TokenPayload } from '../Auth/Auth.interface';
+import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
 import { ChatEvent, IChatRole } from './Chat.interface';
 import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
 import { JwtService } from '../Auth/Jwt/Jwt.service';

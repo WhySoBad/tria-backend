@@ -20,16 +20,12 @@ import { GroupChatBody } from '../../pipes/validation/GroupChatBody.pipe';
 import { MemberEditSocket } from '../../pipes/validation/MemberEditSocket.pipe';
 import { MessageEditSocket } from '../../pipes/validation/MessageEditSocket.pipe';
 import { DBResponse } from '../../util/Types.type';
-import { TokenPayload } from '../Auth/Auth.interface';
+import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import { ChatGateway } from './Chat.gateway';
 import {
   IAdminPermission,
-  IChatEdit,
   IChatRole,
   IChatType,
-  IGroupChat,
-  IMemberEdit,
-  IMessageEdit,
 } from './Chat.interface';
 
 @Injectable()

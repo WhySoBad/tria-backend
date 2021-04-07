@@ -7,12 +7,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../entities/User.entity';
-import { TokenPayload } from './Auth.interface';
 import { DBResponse } from '../../util/Types.type';
 import { BlacklistToken } from '../../entities/BlacklistToken.entity';
 import { Cron } from '@nestjs/schedule';
 import { JwtService } from './Jwt/Jwt.service';
 import { Credentials } from '../../pipes/validation/Credentials.pipe';
+import { TokenPayload } from './Jwt/Jwt.interface';
 
 @Injectable()
 export class AuthService {
