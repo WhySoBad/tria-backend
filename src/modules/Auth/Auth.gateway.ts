@@ -1,30 +1,26 @@
-import {
-  BadRequestException,
-  HttpException,
-  Logger,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { BadRequestException, Logger, UseFilters } from '@nestjs/common';
 import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
-import { Repository } from 'typeorm';
+import { Server, Socket } from 'socket.io';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
+import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
+import { ChatEvent } from '../Chat/Chat.interface';
+import { AuthService } from './Auth.service';
 import { TokenPayload } from './Jwt/Jwt.interface';
 import { JwtService } from './Jwt/Jwt.service';
 
 @WebSocketGateway()
 export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
-    private jwtService: JwtService
-  ) {}
+  constructor(private authService: AuthService) {}
+
+  @WebSocketServer()
+  private server: Server;
 
   /**
    * Handler for general websocket connection
@@ -38,31 +34,17 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private logger: Logger = new Logger('AppGateway');
 
-  async handleConnection(@ConnectedSocket() client: Socket) {
+  @UseFilters(WsExceptionFilter)
+  async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization;
-    if (!token) return client.error(new BadRequestException('Missing Token'));
-    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
-    if (!payload) return client.error(new BadRequestException('Invalid Token'));
-    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-    if (banned) return client.error(new UnauthorizedException('Token Is Banned'));
-
-    this.logger.log(`User connected [${payload.user}, ${client.id}]`);
+    if (!token) throw new BadRequestException('Missing Token');
 
     try {
-      const user: User | undefined = await this.userRepository
-        .createQueryBuilder('user')
-        .where('user.uuid = :uuid', { uuid: payload.user })
-        .leftJoinAndSelect('user.chats', 'chat')
-        .getOne();
-      if (!user) throw new NotFoundException('User Not Found');
-      await new Promise<void>((resolve) => {
-        user?.chats.forEach((member: ChatMember) => {
-          client.join(member.chatUuid.toString(), resolve);
-        });
-      });
-      await this.userRepository.save({ ...user, online: true });
+      const user: User = await this.authService.handleConnect(token);
+      await this.emitToAllContacts(user, ChatEvent.MEMBER_ONLINE);
+      this.logger.log(`User connected [${user.uuid}, ${client.id}]`);
     } catch (exception) {
-      if (exception instanceof HttpException) throw exception;
+      throw exception;
     }
   }
 
@@ -74,26 +56,51 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns Promise<void>
    */
 
-  async handleDisconnect(@ConnectedSocket() client: Socket) {
+  @UseFilters(WsExceptionFilter)
+  async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization;
     if (!token) return client.error(new BadRequestException('Missing Token'));
-    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
-    if (!payload) return client.error(new BadRequestException('Invalid Token'));
-    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-    if (banned) return client.error(new UnauthorizedException('Token Is Banned'));
-
-    this.logger.log(`User disconnected [${payload.user}, ${client.id}]`);
 
     try {
-      const user: User | undefined = await this.userRepository
-        .createQueryBuilder('user')
-        .where('user.uuid = :uuid', { uuid: payload.user })
-        .leftJoinAndSelect('user.chats', 'chat')
-        .getOne();
-      if (!user) throw new NotFoundException('User Not Found');
-      await this.userRepository.save({ ...user, online: false });
+      const user: User = await this.authService.handleDisconnect(token);
+      await this.emitToAllContacts(user, ChatEvent.MEMBER_OFFLINE);
+      this.logger.log(`User disconnected [${user.uuid}, ${client.id}]`);
     } catch (exception) {
-      if (exception instanceof HttpException) throw exception;
+      throw exception;
+    }
+  }
+
+  /**
+   * Function to emit a connect/disconnect event to all contacts of an user
+   *
+   * @param user user who joined
+   *
+   * @param event event to be emitted
+   *
+   * @returns Promise<void>
+   */
+
+  private async emitToAllContacts(user: User, event: ChatEvent): Promise<void> {
+    const allContacts: Array<string> = Array.prototype.concat.apply(
+      [],
+      user.chats.map((member: ChatMember) => member.chat.members.map(({ userUuid }) => userUuid))
+    );
+
+    const uniqueContacts: Array<string> = [...new Set<string>(allContacts)].filter(
+      (uuid: string) => uuid !== user.uuid
+    );
+
+    const sockets: { [id: string]: Socket } = this.server.clients().sockets;
+    for (let socket in sockets) {
+      const client: Socket = sockets[socket];
+      const token: string = client.handshake.headers.authorization;
+      if (token) {
+        const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+        if (!payload) return;
+        if (uniqueContacts.includes(payload.user)) {
+          client.emit(event, user.uuid);
+        }
+      }
     }
   }
 }

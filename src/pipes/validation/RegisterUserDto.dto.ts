@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
-export class RegisterUserBody {
+export class RegisterUserDto {
   @IsNotEmpty()
   @IsEmail()
   readonly mail: string;

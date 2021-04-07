@@ -79,6 +79,14 @@ axios
       console.log(`User Left The Chat [${chat}]`, user);
     });
 
+    socket.on('MEMBER_ONLINE', (uuid) => {
+      console.log(`${uuid} joined`);
+    });
+
+    socket.on('MEMBER_OFFLINE', (uuid) => {
+      console.log(`${uuid} left`);
+    });
+
     /**
      * User initialization
      */
@@ -93,7 +101,7 @@ axios
         console.log(err);
       });
 
-    const chatData = await axios.get(`${url}/chats/get/${chatUuid}`, {
+    const chatData = await axios.get(`${url}/chats/${chatUuid}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -110,7 +118,7 @@ axios
 function sendMessage() {
   const text = document.getElementById('inpt1').value;
   socket.emit('MESSAGE', {
-    //chat: chatUuid,
+    chat: chatUuid,
     uuid: chatUuid,
     data: text,
   });
@@ -121,7 +129,6 @@ function changeName() {
   const text = document.getElementById('inpt2').value;
   socket.emit('CHAT_EDIT', {
     chat: chatUuid,
-    uuid: chatUuid,
     name: text,
   });
   document.getElementById('inpt2').value = '';
@@ -143,7 +150,6 @@ function editMember() {
   const role = document.getElementById('inpt4').value;
   socket.emit('MEMBER_EDIT', {
     chat: chatUuid,
-    uuid: chatUuid,
     user: member,
     role: role,
     permissions: ['KICK', 'EDIT'],

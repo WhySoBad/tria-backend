@@ -7,9 +7,9 @@ import {
   IsUUID,
   NotEquals,
 } from 'class-validator';
-import { IChatType } from '../../modules/Chat/Chat.interface';
+import { ChatType } from '../../modules/Chat/Chat.interface';
 
-export class GroupChatBody {
+export class GroupChatDto {
   @IsNotEmpty()
   @IsString()
   readonly name: string;
@@ -19,9 +19,9 @@ export class GroupChatBody {
   readonly tag: string;
 
   @IsNotEmpty()
-  @IsEnum(IChatType)
-  @NotEquals(IChatType.PRIVATE)
-  readonly type: IChatType;
+  @IsEnum(ChatType)
+  @NotEquals(ChatType.PRIVATE)
+  readonly type: ChatType;
 
   @IsNotEmpty()
   @IsString()

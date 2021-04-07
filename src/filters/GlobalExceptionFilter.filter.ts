@@ -11,11 +11,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response: Response = context.getResponse<Response>();
 
     if (!(exception instanceof HttpException)) {
+      this.logger.log(`Received unknown exception`);
+      this.logger.log(exception);
       response
         .status(500)
         .json({ statusCode: 500, message: 'Unknown Error', error: 'Internal Server Error' });
-      this.logger.log(`Received unknown exception`);
-      this.logger.log(exception);
       return;
     }
 
@@ -25,7 +25,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const message: string | Array<string> = exceptionResponse.message;
 
     const final: string = capitalizeMessage(Array.isArray(message) ? message.join(', ') : message);
-
     response.status(statusCode).json({ statusCode: statusCode, message: final, error: error });
   }
 }
@@ -39,8 +38,5 @@ export class GlobalExceptionFilter implements ExceptionFilter {
  */
 
 const capitalizeMessage: Function = (message: string): string => {
-  return message
-    .split(' ')
-    .map((section: string) => section[0].toUpperCase() + section.substr(1))
-    .join(' ');
+  return message.replace(/\b\w/g, (l) => l.toUpperCase());
 };

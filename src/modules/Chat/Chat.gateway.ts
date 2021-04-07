@@ -10,7 +10,12 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import {
+  ConnectedSocket,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Repository } from 'typeorm';
 import { Chat } from '../../entities/Chat.entity';
@@ -18,17 +23,17 @@ import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
-import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
-import { ChatEvent, IChatRole } from './Chat.interface';
+import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
+import { ChatEvent, GroupRole } from './Chat.interface';
 import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { ChatService } from './Chat.service';
-import { MessageSocket } from '../../pipes/validation/MessageSocket.pipe';
+import { MessageDto } from '../../pipes/validation/MessageDto.dto';
 import Authorization from '../../decorators/Authorization.decorator';
 import AuthGuard from '../../guards/AuthGuard';
-import { ChatEditSocket } from '../../pipes/validation/ChatEditSocket.pipe';
-import { MessageEditSocket } from '../../pipes/validation/MessageEditSocket.pipe';
-import { MemberEditSocket } from '../../pipes/validation/MemberEditSocket.pipe';
+import { ChatEditDto } from '../../pipes/validation/ChatEditDto.dto';
+import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
+import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
 
 @WebSocketGateway()
 @Injectable()
@@ -57,7 +62,8 @@ export class ChatGateway {
   @UseFilters(WsExceptionFilter)
   async handleMessage(
     @Authorization() payload: TokenPayload,
-    @Body() body: MessageSocket
+    @Body() body: MessageDto,
+    @ConnectedSocket() client: Socket
   ): Promise<void> {
     try {
       const message: Message = await this.chatService.handleMessage(body.chat, body.data, payload);
@@ -70,6 +76,7 @@ export class ChatGateway {
         pinned: message.pinned,
         text: message.text,
       });
+      if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
     } catch (exception) {
       throw exception;
     }
@@ -91,7 +98,8 @@ export class ChatGateway {
   @UseFilters(WsExceptionFilter)
   async handleChatEdit(
     @Authorization() payload: TokenPayload,
-    @Body() body: ChatEditSocket
+    @Body() body: ChatEditDto,
+    @ConnectedSocket() client: Socket
   ): Promise<void> {
     try {
       const chat: Chat = await this.chatService.handleChatEdit(body.chat, body, payload);
@@ -102,6 +110,7 @@ export class ChatGateway {
         description: chat.description,
         type: chat.type,
       });
+      if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
     } catch (exception) {
       throw exception;
     }
@@ -123,7 +132,8 @@ export class ChatGateway {
   @UseFilters(WsExceptionFilter)
   async handleMessageEdit(
     @Authorization() payload: TokenPayload,
-    @Body() body: MessageEditSocket
+    @Body() body: MessageEditDto,
+    @ConnectedSocket() client: Socket
   ): Promise<void> {
     try {
       const message: Message = await this.chatService.handleMessageEdit(body, payload);
@@ -135,6 +145,7 @@ export class ChatGateway {
         edited: message.edited,
         editedAt: message.editedAt,
       });
+      if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
     } catch (exception) {
       throw exception;
     }
@@ -158,7 +169,8 @@ export class ChatGateway {
   @UseFilters(WsExceptionFilter)
   async handleMemberEdit(
     @Authorization() payload: TokenPayload,
-    @Body() body: MemberEditSocket
+    @Body() body: MemberEditDto,
+    @ConnectedSocket() client: Socket
   ): Promise<void> {
     console.log(body);
     try {
@@ -174,22 +186,25 @@ export class ChatGateway {
           role: 'ADMIN',
           permissions: member.permissions,
         });
+        if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
       } else if (Array.isArray(member)) {
         member.forEach((member: ChatMember) => {
           this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
             chat: body.chat,
             user: member.userUuid,
-            role: IChatRole[member.role],
+            role: GroupRole[member.role],
             permissions: [],
           });
+          if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
         });
       } else {
         this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
           chat: body.chat,
           user: member.userUuid,
-          role: IChatRole[member.role],
+          role: GroupRole[member.role],
           permissions: [],
         });
+        if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
       }
     } catch (exception) {
       throw exception;
@@ -258,7 +273,7 @@ export class ChatGateway {
         uuid: user.uuid,
         joinedAt: member.joinedAt,
         createdAt: user.createdAt,
-        role: IChatRole[member.role],
+        role: GroupRole[member.role],
         name: user.name,
         tag: user.tag,
         description: user.description,
@@ -291,7 +306,7 @@ export class ChatGateway {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
-      const clientToken: string = client.handshake.headers['authorization']?.substr(7);
+      const clientToken: string = client.handshake.headers.authorization;
       if (clientToken) {
         const clientPayload: TokenPayload | undefined = JwtService.DecodeToken(clientToken);
         if (clientPayload?.user == payload.uuid) client.leave(chatUuid);
@@ -317,7 +332,7 @@ export class ChatGateway {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
-      const token: string = client.handshake.headers['authorization']?.substr(7);
+      const token: string = client.handshake.headers.authorization;
       try {
         const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
         if (!payload) throw new BadRequestException('Invalid Token');

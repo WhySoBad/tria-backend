@@ -8,7 +8,6 @@ import {
   ParseUUIDPipe,
   Post,
   UseGuards,
-  ValidationPipe,
 } from '@nestjs/common';
 import Authorization from '../../decorators/Authorization.decorator';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
@@ -19,20 +18,12 @@ import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
-import { BanMemberBody } from '../../pipes/validation/BanMemberBody.pipe';
-import { GroupChatBody } from '../../pipes/validation/GroupChatBody.pipe';
-import { KickMemberBody } from '../../pipes/validation/KickMemberBody.pipe';
-import { PrivateChatBody } from '../../pipes/validation/PrivateChatBody.pipe';
-import { DBResponse } from '../../util/Types.type';
+import { BanMemberDto } from '../../pipes/validation/BanMemberDto.dto';
+import { GroupChatDto } from '../../pipes/validation/GroupChatDto.dto';
+import { KickMemberDto } from '../../pipes/validation/KickMemberDto.dto';
+import { PrivateChatDto } from '../../pipes/validation/PrivateChatDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import {
-  IAdminPermission,
-  IChat,
-  IChatPreview,
-  IChatRole,
-  IChatType,
-  IGroupChat,
-} from './Chat.interface';
+import { Permission, ChatPreview, GroupRole, ChatType } from './Chat.interface';
 import { ChatService } from './Chat.service';
 
 /**
@@ -57,7 +48,7 @@ export class ChatController {
   @UseGuards(AuthGuard)
   async createPrivate(
     @Authorization() payload: TokenPayload,
-    @Body() body: PrivateChatBody
+    @Body() body: PrivateChatDto
   ): Promise<void> {
     try {
       await this.chatService.handlePrivateCreate(body.uuid, payload);
@@ -71,7 +62,7 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param chat IGroupChat
+   * @param body request body
    *
    * @returns Promise<void>
    */
@@ -80,10 +71,10 @@ export class ChatController {
   @UseGuards(AuthGuard)
   async createGroup(
     @Authorization() payload: TokenPayload,
-    @Body() chat: GroupChatBody
+    @Body() body: GroupChatDto
   ): Promise<void> {
     try {
-      await this.chatService.handleGroupCreate(chat, payload);
+      await this.chatService.handleGroupCreate(body, payload);
     } catch (exception) {
       throw exception;
     }
@@ -175,7 +166,7 @@ export class ChatController {
   async ban(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
-    @Body() body: BanMemberBody
+    @Body() body: BanMemberDto
   ): Promise<void> {
     try {
       await this.chatService.handleBan(uuid, body.uuid, payload);
@@ -201,7 +192,7 @@ export class ChatController {
   async unban(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
-    @Body() body: BanMemberBody
+    @Body() body: BanMemberDto
   ): Promise<void> {
     try {
       await this.chatService.handleUnban(uuid, body.uuid, payload);
@@ -227,7 +218,7 @@ export class ChatController {
   async kick(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
-    @Body() body: KickMemberBody
+    @Body() body: KickMemberDto
   ): Promise<void> {
     try {
       await this.chatService.handleKick(uuid, body.uuid, payload);
@@ -246,8 +237,8 @@ export class ChatController {
    * @returns Promise<any>
    */
 
-  @Get('get/:uuid/preview')
-  async getPreview(@Param('uuid', new ParseUUIDPipe()) uuid: string): Promise<IChatPreview> {
+  @Get(':uuid/preview')
+  async getPreview(@Param('uuid', new ParseUUIDPipe()) uuid: string): Promise<ChatPreview> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
       if (chat instanceof HttpException) throw chat;
@@ -272,18 +263,18 @@ export class ChatController {
    *
    * @param uuid uuid of Chat
    *
-   * @returns Promise<IChat>
+   * @returns Promise<any>
    */
-  @Get('get/:uuid')
+  @Get(':uuid')
   @UseGuards(AuthGuard)
   async get(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string
-  ): Promise<IChat> {
+  ): Promise<any> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
-      if (chat.type == IChatType.PRIVATE) {
-        const member: DBResponse<ChatMember> = chat.members.find((member: ChatMember) => {
+      if (chat.type == ChatType.PRIVATE) {
+        const member: ChatMember | undefined = chat.members.find((member: ChatMember) => {
           member.userUuid == payload.user;
         });
         if (!member) throw new BadRequestException('User Has To Be Member Of Private Chat');
@@ -292,28 +283,27 @@ export class ChatController {
       const admins: Array<ChatAdmin> = chat.admins;
       return {
         uuid: chat.uuid,
-        type: IChatType[chat.type],
+        type: ChatType[chat.type],
         name: chat.name,
         tag: chat.tag,
         description: chat.description,
         members: chat.members.map((member: ChatMember) => {
           const user: User = member.user;
-          const chatAdmin: DBResponse<ChatAdmin> = admins?.find((admin: ChatAdmin) => {
+          const chatAdmin: ChatAdmin | undefined = admins?.find((admin: ChatAdmin) => {
             return admin.userUuid == user.uuid;
           });
           const admin: any = chatAdmin && {
             promotedAt: chatAdmin.promotedAt,
             permissions: chatAdmin.permissions.map((perm: AdminPermission) => {
-              return IAdminPermission[perm.permission];
+              return Permission[perm.permission];
             }),
           };
-
           return {
             joinedAt: member.joinedAt,
             user: {
               uuid: user.uuid,
               createdAt: user.createdAt,
-              role: IChatRole[member.role],
+              role: GroupRole[member.role],
               name: user.name,
               tag: user.tag,
               description: user.description,

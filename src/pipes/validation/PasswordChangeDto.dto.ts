@@ -1,11 +1,11 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class UserPasswordResetConfirm {
+export class PasswordChangeDto {
   @IsNotEmpty()
   @IsString()
-  readonly token: string;
+  readonly old: string;
 
   @IsNotEmpty()
   @IsString()
-  readonly password: string;
+  readonly new: string;
 }

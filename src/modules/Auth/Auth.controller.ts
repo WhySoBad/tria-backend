@@ -13,7 +13,7 @@ import { v4 } from 'uuid';
 import Authorization from '../../decorators/Authorization.decorator';
 import AuthGuard from '../../guards/AuthGuard';
 import { JwtService } from './Jwt/Jwt.service';
-import { Credentials } from '../../pipes/validation/Credentials.pipe';
+import { CredentialsDto } from '../../pipes/validation/CredentialsDto.dto';
 import { TokenPayload, TokenType } from './Jwt/Jwt.interface';
 
 /**
@@ -52,7 +52,7 @@ export class AuthController {
    */
 
   @Post('login')
-  async login(@Body() credentials: Credentials): Promise<string> {
+  async login(@Body() credentials: CredentialsDto): Promise<string> {
     try {
       const user: User = await this.authService.handleLogin(credentials);
       return JwtService.GenerateToken(

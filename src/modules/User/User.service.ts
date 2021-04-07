@@ -11,17 +11,17 @@ import { v4 } from 'uuid';
 import { config } from '../../config';
 import { PendingUser } from '../../entities/PendingUser.entity';
 import { User } from '../../entities/User.entity';
-import { EditUser } from '../../pipes/validation/EditUser.pipe';
-import { RegisterUserBody } from '../../pipes/validation/RegisterUserBody.pipe';
-import { UserPasswordChange } from '../../pipes/validation/UserPasswordChange.pipe';
-import { UserPasswordReset } from '../../pipes/validation/UserPasswordReset.pipe';
-import { UserPasswordResetConfirm } from '../../pipes/validation/UserPasswordResetConfirm.pipe';
-import { UserPasswordResetValidate } from '../../pipes/validation/UserPasswordResetValidate.pipe';
-import { UserVerifyBody } from '../../pipes/validation/UserVerifyBody.pipe';
+import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
+import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
+import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
+import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
+import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
+import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
+import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
 import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { MailerService } from '@nestjs-modules/mailer';
-import { UserRegisterValidateBody } from '../../pipes/validation/UserRegisterValidateBody.pipe';
+import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 
 @Injectable()
 export class UserService {
@@ -40,7 +40,7 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handleRegister(settings: RegisterUserBody): Promise<void> {
+  async handleRegister(settings: RegisterUserDto): Promise<void> {
     let user: PendingUser = new PendingUser();
     const hashed: string = await JwtService.Hash(settings.password);
 
@@ -89,7 +89,7 @@ export class UserService {
    * @returns Promise<boolean>
    */
 
-  async handleValidate(data: UserRegisterValidateBody): Promise<boolean> {
+  async handleValidate(data: RegisterValidateDto): Promise<boolean> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(
       data.token,
       TokenType.REGISTER
@@ -108,7 +108,7 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handleVerify(data: UserVerifyBody): Promise<void> {
+  async handleVerify(data: RegisterVerifyDto): Promise<void> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(
       data.token,
       TokenType.PASSWORD_RESET
@@ -147,7 +147,7 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handleEdit(data: EditUser, payload: TokenPayload): Promise<void> {
+  async handleEdit(data: EditUserDto, payload: TokenPayload): Promise<void> {
     const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
     if (!user) throw new NotFoundException('User Not Found');
 
@@ -185,7 +185,7 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handlePasswordChange(data: UserPasswordChange, payload: TokenPayload): Promise<void> {
+  async handlePasswordChange(data: PasswordChangeDto, payload: TokenPayload): Promise<void> {
     const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
     if (!user) throw new NotFoundException('User Not Found');
     const oldHashed: string = await JwtService.Hash(data.old);
@@ -205,7 +205,7 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handlePasswordReset(data: UserPasswordReset): Promise<void> {
+  async handlePasswordReset(data: PasswordResetDto): Promise<void> {
     const user:
       | User
       | undefined = await this.userRepository
@@ -241,7 +241,7 @@ export class UserService {
    * @returns Promise<boolean>
    */
 
-  async handlePasswordResetValidate(data: UserPasswordResetValidate): Promise<boolean> {
+  async handlePasswordResetValidate(data: PasswordResetValidateDto): Promise<boolean> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(
       data.token,
       TokenType.PASSWORD_RESET
@@ -258,7 +258,7 @@ export class UserService {
    * @returns Promise<void>
    */
 
-  async handlePasswordResetConfirm(data: UserPasswordResetConfirm): Promise<void> {
+  async handlePasswordResetConfirm(data: PasswordResetConfirmDto): Promise<void> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(
       data.token,
       TokenType.PASSWORD_RESET

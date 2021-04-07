@@ -18,9 +18,9 @@ import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
-import { EditUser } from '../../pipes/validation/EditUser.pipe';
-import { RegisterUserBody } from '../../pipes/validation/RegisterUserBody.pipe';
-import { UserVerifyBody } from '../../pipes/validation/UserVerifyBody.pipe';
+import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
+import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
+import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
 import { UserPreview } from './User.interface';
 import { UserService } from './User.service';
 import { diskStorage } from 'multer';
@@ -29,12 +29,12 @@ import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { config } from '../../config';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { Response } from 'express';
-import { UserPasswordChange } from '../../pipes/validation/UserPasswordChange.pipe';
-import { UserPasswordReset } from '../../pipes/validation/UserPasswordReset.pipe';
+import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
+import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import { UserPasswordResetValidate } from '../../pipes/validation/UserPasswordResetValidate.pipe';
-import { UserPasswordResetConfirm } from '../../pipes/validation/UserPasswordResetConfirm.pipe';
-import { UserRegisterValidateBody } from '../../pipes/validation/UserRegisterValidateBody.pipe';
+import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
+import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
+import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 
 const uploadConfig: MulterOptions = {
   fileFilter: (req: any, file: any, callback: any) => {
@@ -87,7 +87,7 @@ export class UserController {
    */
 
   @Post('register')
-  async register(@Body() user: RegisterUserBody): Promise<void> {
+  async register(@Body() user: RegisterUserDto): Promise<void> {
     try {
       await this.userService.handleRegister(user);
     } catch (exception) {
@@ -104,7 +104,7 @@ export class UserController {
    */
 
   @Post('register/validate')
-  async validate(@Body() body: UserRegisterValidateBody): Promise<boolean> {
+  async validate(@Body() body: RegisterValidateDto): Promise<boolean> {
     try {
       return await this.userService.handleValidate(body);
     } catch (exception) {
@@ -121,7 +121,7 @@ export class UserController {
    */
 
   @Post('register/verify')
-  async verify(@Body() body: UserVerifyBody): Promise<void> {
+  async verify(@Body() body: RegisterVerifyDto): Promise<void> {
     try {
       await this.userService.handleVerify(body);
     } catch (exception) {
@@ -141,7 +141,7 @@ export class UserController {
 
   @Post('edit')
   @UseGuards(AuthGuard)
-  async edit(@Body() user: EditUser, @Authorization() payload: TokenPayload): Promise<void> {
+  async edit(@Body() user: EditUserDto, @Authorization() payload: TokenPayload): Promise<void> {
     console.log(user);
     try {
       await this.userService.handleEdit(user, payload);
@@ -163,7 +163,7 @@ export class UserController {
   @Post('password/change')
   @UseGuards(AuthGuard)
   async passwordChange(
-    @Body() body: UserPasswordChange,
+    @Body() body: PasswordChangeDto,
     @Authorization() payload: TokenPayload
   ): Promise<void> {
     try {
@@ -182,7 +182,7 @@ export class UserController {
    */
 
   @Post('password/reset')
-  async passwordReset(@Body() body: UserPasswordReset): Promise<void> {
+  async passwordReset(@Body() body: PasswordResetDto): Promise<void> {
     try {
       await this.userService.handlePasswordReset(body);
     } catch (exception) {
@@ -199,7 +199,7 @@ export class UserController {
    */
 
   @Post('password/reset/validate')
-  async passwordResetValidate(@Body() body: UserPasswordResetValidate): Promise<boolean> {
+  async passwordResetValidate(@Body() body: PasswordResetValidateDto): Promise<boolean> {
     return await this.userService.handlePasswordResetValidate(body);
   }
 
@@ -212,7 +212,7 @@ export class UserController {
    */
 
   @Post('password/reset/confirm')
-  async passwordRestConfirm(@Body() body: UserPasswordResetConfirm): Promise<void> {
+  async passwordRestConfirm(@Body() body: PasswordResetConfirmDto): Promise<void> {
     try {
       await this.userService.handlePasswordResetConfirm(body);
     } catch (exception) {

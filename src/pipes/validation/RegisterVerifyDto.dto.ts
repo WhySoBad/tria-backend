@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class UserVerifyBody {
+export class RegisterVerifyDto {
   @IsNotEmpty()
   @IsString()
   readonly token: string;

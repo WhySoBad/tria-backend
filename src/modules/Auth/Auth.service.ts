@@ -7,11 +7,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../entities/User.entity';
-import { DBResponse } from '../../util/Types.type';
 import { BlacklistToken } from '../../entities/BlacklistToken.entity';
 import { Cron } from '@nestjs/schedule';
 import { JwtService } from './Jwt/Jwt.service';
-import { Credentials } from '../../pipes/validation/Credentials.pipe';
+import { CredentialsDto } from '../../pipes/validation/CredentialsDto.dto';
 import { TokenPayload } from './Jwt/Jwt.interface';
 
 @Injectable()
@@ -46,8 +45,8 @@ export class AuthService {
    * @returns Promise<User>
    */
 
-  async handleLogin({ username, password }: Credentials): Promise<User> {
-    const user: DBResponse<User> = await this.userRepository.findOne({
+  async handleLogin({ username, password }: CredentialsDto): Promise<User> {
+    const user: User | undefined = await this.userRepository.findOne({
       mail: username,
     });
     if (!user) throw new NotFoundException('User Not Found');
@@ -68,7 +67,7 @@ export class AuthService {
 
   async handleLogout(payload: TokenPayload): Promise<void> {
     const { uuid, exp } = payload;
-    const user: DBResponse<User> = await this.userRepository.findOne({
+    const user: User | undefined = await this.userRepository.findOne({
       uuid: payload.user,
     });
     if (!user) throw new NotFoundException('User Not Found');
@@ -78,6 +77,61 @@ export class AuthService {
     blacklistToken.uuid = uuid;
     blacklistToken.expires = new Date(exp * 1000);
     await this.blacklistRepository.save(blacklistToken);
+  }
+
+  /**
+   * Function to handle a connect
+   *
+   * @param token user jwt
+   *
+   * @returns Promise<User>
+   */
+
+  async handleConnect(token: string): Promise<User> {
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+    if (!payload) throw new BadRequestException('Invalid Token');
+    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
+    if (banned) throw new UnauthorizedException('Token Is Banned');
+
+    const user: User | undefined = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.uuid = :uuid', { uuid: payload.user })
+      .leftJoinAndSelect('user.chats', 'member')
+      .leftJoinAndSelect('member.chat', 'chat')
+      .leftJoinAndSelect('chat.members', 'members')
+      .getOne();
+    if (!user) throw new NotFoundException('User Not Found');
+    user.online = true;
+    await this.userRepository.save(user);
+
+    return user;
+  }
+
+  /**
+   * Function to handle a disconnect
+   *
+   * @param token user jwt
+   *
+   * @returns Promise<User>
+   */
+
+  async handleDisconnect(token: string): Promise<User> {
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+    if (!payload) throw new BadRequestException('Invalid Token');
+    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
+    if (banned) throw new UnauthorizedException('Token Is Banned');
+
+    const user: User | undefined = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.uuid = :uuid', { uuid: payload.user })
+      .leftJoinAndSelect('user.chats', 'member')
+      .leftJoinAndSelect('member.chat', 'chat')
+      .leftJoinAndSelect('chat.members', 'members')
+      .getOne();
+    if (!user) throw new NotFoundException('User Not Found');
+    user.online = false;
+    await this.userRepository.save(user);
+    return user;
   }
 
   /**

@@ -1,11 +1,11 @@
 import { Column, Entity, JoinColumn, JoinTable, ManyToOne, PrimaryColumn } from 'typeorm';
-import { IAdminPermission } from '../modules/Chat/Chat.interface';
+import { Permission } from '../modules/Chat/Chat.interface';
 import { ChatAdmin } from './ChatAdmin.entity';
 
 @Entity()
 export class AdminPermission {
   @PrimaryColumn('int')
-  permission: IAdminPermission;
+  permission: Permission;
 
   @Column('uuid') chatUuid: string;
 

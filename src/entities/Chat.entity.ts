@@ -1,5 +1,5 @@
 import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { IChatType } from '../modules/Chat/Chat.interface';
+import { ChatType } from '../modules/Chat/Chat.interface';
 import { BannedMember } from './BannedMember.entity';
 import { ChatAdmin } from './ChatAdmin.entity';
 import { ChatMember } from './ChatMember.entity';
@@ -9,7 +9,7 @@ import { Message } from './Message.entity';
 export class Chat {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
-  @Column('int') type: IChatType;
+  @Column('int') type: ChatType;
 
   @Column({ type: 'text', nullable: true }) name: string;
 

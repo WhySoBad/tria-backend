@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { IChatRole } from '../modules/Chat/Chat.interface';
+import { GroupRole } from '../modules/Chat/Chat.interface';
 import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 
@@ -20,7 +20,7 @@ export class ChatMember {
 
   @CreateDateColumn({ type: 'timestamp' }) joinedAt: Date;
 
-  @Column({ type: 'int', default: IChatRole.MEMBER }) role: IChatRole;
+  @Column({ type: 'int', default: GroupRole.MEMBER }) role: GroupRole;
 
   @ManyToOne(() => User, (user) => user.chats, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userUuid', referencedColumnName: 'uuid' })

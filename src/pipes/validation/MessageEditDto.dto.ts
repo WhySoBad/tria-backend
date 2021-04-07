@@ -1,6 +1,10 @@
 import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
-export class MessageEditSocket {
+export class MessageEditDto {
+  @IsOptional()
+  @IsUUID(4)
+  readonly actionUuid: string;
+
   @IsNotEmpty()
   @IsUUID(4)
   readonly message: string;

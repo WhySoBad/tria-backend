@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
 
-export class ChatEditSocket {
-  @IsNotEmpty()
+export class ChatEditDto {
+  @IsOptional()
   @IsUUID(4)
-  readonly uuid: string;
+  readonly actionUuid: string;
 
   @IsNotEmpty()
   @IsUUID(4)
