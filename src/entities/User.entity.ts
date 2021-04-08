@@ -28,7 +28,7 @@ export class User {
 
   @Column('text') description: string;
 
-  @Column('text') avatar: string;
+  @Column({ type: 'text', nullable: true }) avatar: string | null;
 
   @Column('text') locale: string;
 

@@ -19,7 +19,7 @@ class WsExceptionFilter extends BaseWsExceptionFilter {
       this.logger.log(`Received unknown exception`);
       this.logger.log(exception);
       if (data?.actionUuid) {
-        socket.send(ChatEvent.ACTION_ERROR, {
+        socket.emit(ChatEvent.ACTION_ERROR, {
           uuid: data.actionUuid,
           statusCode: 500,
           message: 'Unknown Error',
@@ -34,7 +34,7 @@ class WsExceptionFilter extends BaseWsExceptionFilter {
     }
 
     if (data?.actionUuid) {
-      socket.send(ChatEvent.ACTION_ERROR, {
+      socket.emit(ChatEvent.ACTION_ERROR, {
         uuid: data.actionUuid,
         statusCode: statusCode,
         message: final,

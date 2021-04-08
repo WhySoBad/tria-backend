@@ -1,4 +1,4 @@
-import { BadRequestException, Logger, UseFilters } from '@nestjs/common';
+import { BadRequestException, HttpException, Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   OnGatewayConnection,
@@ -9,7 +9,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
-import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
 import { ChatEvent } from '../Chat/Chat.interface';
 import { AuthService } from './Auth.service';
 import { TokenPayload } from './Jwt/Jwt.interface';
@@ -34,17 +33,25 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private logger: Logger = new Logger('AppGateway');
 
-  @UseFilters(WsExceptionFilter)
   async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization;
-    if (!token) throw new BadRequestException('Missing Token');
-
-    try {
-      const user: User = await this.authService.handleConnect(token);
-      await this.emitToAllContacts(user, ChatEvent.MEMBER_ONLINE);
-      this.logger.log(`User connected [${user.uuid}, ${client.id}]`);
-    } catch (exception) {
-      throw exception;
+    if (!token) client.error(new BadRequestException('Missing Token').getResponse());
+    if ((await this.timesOnline(token)) > 1) {
+      client.error(new BadRequestException('User Is Already Online').getResponse());
+      client.disconnect(true);
+    } else {
+      try {
+        const user: User = await this.authService.handleConnect(token);
+        await new Promise((resolve) => {
+          user.chats.forEach(({ chatUuid }) => {
+            client.join(chatUuid, resolve);
+          });
+        });
+        await this.emitToAllContacts(user, ChatEvent.MEMBER_ONLINE);
+        this.logger.log(`User connected [${user.uuid}, ${client.id}]`);
+      } catch (exception) {
+        if (exception instanceof HttpException) client.error(exception.getResponse());
+      }
     }
   }
 
@@ -56,17 +63,17 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns Promise<void>
    */
 
-  @UseFilters(WsExceptionFilter)
   async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization;
-    if (!token) return client.error(new BadRequestException('Missing Token'));
-
-    try {
-      const user: User = await this.authService.handleDisconnect(token);
-      await this.emitToAllContacts(user, ChatEvent.MEMBER_OFFLINE);
-      this.logger.log(`User disconnected [${user.uuid}, ${client.id}]`);
-    } catch (exception) {
-      throw exception;
+    if (!token) return client.error(new BadRequestException('Missing Token').getResponse());
+    if ((await this.timesOnline(token)) === 0) {
+      try {
+        const user: User = await this.authService.handleDisconnect(token);
+        await this.emitToAllContacts(user, ChatEvent.MEMBER_OFFLINE);
+        this.logger.log(`User disconnected [${user.uuid}, ${client.id}]`);
+      } catch (exception) {
+        if (exception instanceof HttpException) client.error(exception.getResponse());
+      }
     }
   }
 
@@ -102,5 +109,27 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
     }
+  }
+
+  /**
+   * Function to get how many times the user is online
+   *
+   * @param token user jwt
+   *
+   * @returns Promise<number>
+   */
+
+  private async timesOnline(token: string): Promise<number> {
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+    if (!payload) return 0;
+    const sockets: { [id: string]: Socket } = this.server.clients().sockets;
+    const user: Array<Socket> = Object.values(sockets).filter(
+      ({
+        handshake: {
+          headers: { authorization },
+        },
+      }) => JwtService.DecodeToken(authorization)?.user === payload?.user
+    );
+    return user.length;
   }
 }

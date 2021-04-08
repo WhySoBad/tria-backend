@@ -24,7 +24,7 @@ import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import { ChatEvent, GroupRole } from './Chat.interface';
+import { ChatEvent, ChatType, GroupRole } from './Chat.interface';
 import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { ChatService } from './Chat.service';
@@ -76,7 +76,9 @@ export class ChatGateway {
         pinned: message.pinned,
         text: message.text,
       });
-      if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+      if (body.actionUuid) {
+        this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+      }
     } catch (exception) {
       throw exception;
     }
@@ -108,9 +110,11 @@ export class ChatGateway {
         tag: chat.tag,
         name: chat.name,
         description: chat.description,
-        type: chat.type,
+        type: ChatType[chat.type],
       });
-      if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+      if (body.actionUuid) {
+        this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+      }
     } catch (exception) {
       throw exception;
     }
@@ -145,7 +149,9 @@ export class ChatGateway {
         edited: message.edited,
         editedAt: message.editedAt,
       });
-      if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+      if (body.actionUuid) {
+        this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+      }
     } catch (exception) {
       throw exception;
     }
@@ -186,7 +192,9 @@ export class ChatGateway {
           role: 'ADMIN',
           permissions: member.permissions,
         });
-        if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+        if (body.actionUuid) {
+          this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+        }
       } else if (Array.isArray(member)) {
         member.forEach((member: ChatMember) => {
           this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
@@ -195,7 +203,9 @@ export class ChatGateway {
             role: GroupRole[member.role],
             permissions: [],
           });
-          if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+          if (body.actionUuid) {
+            this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+          }
         });
       } else {
         this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
@@ -204,7 +214,9 @@ export class ChatGateway {
           role: GroupRole[member.role],
           permissions: [],
         });
-        if (body.actionUuid) client.send(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+        if (body.actionUuid) {
+          this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
+        }
       }
     } catch (exception) {
       throw exception;
@@ -328,7 +340,7 @@ export class ChatGateway {
    */
 
   @UseFilters(WsExceptionFilter)
-  async handleGroupUserBan(chatUuid: string, userUuid: string): Promise<void> {
+  async handleMemberBan(chatUuid: string, userUuid: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
@@ -340,7 +352,27 @@ export class ChatGateway {
         if (banned) throw new BadRequestException('Token Is Banned');
         if (payload.user == userUuid) client.leave(chatUuid);
 
-        this.server.to(chatUuid).emit(ChatEvent.MEMBER_BANNED, { chat: chatUuid, user: userUuid });
+        this.server.to(chatUuid).emit(ChatEvent.MEMBER_BAN, { chat: chatUuid, user: userUuid });
+      } catch (exception) {
+        throw exception;
+      }
+    }
+  }
+
+  @UseFilters(WsExceptionFilter)
+  async handleMemberUnban(chatUuid: string, userUuid: string): Promise<void> {
+    const sockets: { [id: string]: Socket } = this.server.clients().sockets;
+    for (let socket in sockets) {
+      const client: Socket = sockets[socket];
+      const token: string = client.handshake.headers.authorization;
+      try {
+        const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
+        if (!payload) throw new BadRequestException('Invalid Token');
+        const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
+        if (banned) throw new BadRequestException('Token Is Banned');
+        if (payload.user == userUuid) client.join(chatUuid);
+
+        this.server.to(chatUuid).emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
       } catch (exception) {
         throw exception;
       }

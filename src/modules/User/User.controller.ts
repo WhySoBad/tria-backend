@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -35,6 +36,7 @@ import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
 import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
 import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
+import { access } from 'fs';
 
 const uploadConfig: MulterOptions = {
   fileFilter: (req: any, file: any, callback: any) => {
@@ -265,41 +267,7 @@ export class UserController {
         online: user.online,
         createdAt: user.createdAt,
         lastSeen: user.lastSeen,
-        chats: user.chats.map((member: ChatMember) => {
-          const chat: Chat = member.chat;
-          return {
-            ...chat,
-            members: chat.members.map((member: ChatMember) => {
-              const user: User = member.user;
-              return {
-                role: member.role,
-                joinedAt: member.joinedAt,
-                user: {
-                  uuid: user.uuid,
-                  name: user.name,
-                  tag: user.tag,
-                  description: user.description,
-                  locale: user.locale,
-                  online: user.online,
-                  createdAt: user.createdAt,
-                  lastSeen: user.lastSeen,
-                },
-              };
-            }),
-            messages: chat.messages.map((message: Message) => {
-              return {
-                uuid: message.uuid,
-                chat: message.chatUuid,
-                createdAt: message.createdAt,
-                editedAt: message.editedAt,
-                edited: message.edited,
-                text: message.text,
-                pinned: message.pinned,
-                user: message.userUuid,
-              };
-            }),
-          };
-        }),
+        chats: user.chats.map((member: ChatMember) => member.chatUuid),
       };
     } catch (exception) {
       throw exception;
@@ -322,6 +290,7 @@ export class UserController {
     try {
       const user: User = await this.userService.handleGet(uuid);
       return {
+        uuid: user.uuid,
         name: user.name,
         tag: user.tag,
         description: user.description,
@@ -344,7 +313,14 @@ export class UserController {
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
     @Res() response: Response
   ): Promise<any> {
-    response.sendFile(`${uuid}${config.avatarType}`, { root: './data/avatar/user' });
+    try {
+      await this.userService.handleAvatarGet(uuid);
+      response.sendFile(`${uuid}${config.avatarType}`, { root: './data/avatar/user' }, (err) => {
+        if (err) new NotFoundException('Avatar Not Found');
+      });
+    } catch (exception) {
+      throw exception;
+    }
   }
 
   /**
@@ -352,13 +328,38 @@ export class UserController {
    *
    * @param file uploaded file
    *
-   * @returns Promise<string>
+   * @returns Promise<void>
    */
 
   @Post('avatar/upload')
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar', uploadConfig))
-  async uploadAvatar(@UploadedFile() file: Express.Multer.File): Promise<string> {
-    return file.filename;
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Authorization() payload: TokenPayload
+  ): Promise<void> {
+    try {
+      await this.userService.handleAvatarUpload(file, payload);
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Route to delete an avatar picture
+   *
+   * @param payload
+   *
+   * @returns Promise<void>
+   */
+
+  @Get('avatar/delete')
+  @UseGuards(AuthGuard)
+  async handleAvatarDelete(@Authorization() payload: TokenPayload) {
+    try {
+      await this.userService.handleAvatarDelete(payload);
+    } catch (exception) {
+      throw exception;
+    }
   }
 }

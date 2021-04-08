@@ -22,6 +22,8 @@ import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { MailerService } from '@nestjs-modules/mailer';
 import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
+import { unlinkSync } from 'fs';
+import { access } from 'fs/promises';
 
 @Injectable()
 export class UserService {
@@ -130,6 +132,7 @@ export class UserService {
     user.mail = pending.mail;
     user.password = pending.password;
     user.createdAt = pending.createdAt;
+    user.avatar = user.uuid;
     user.online = false;
     user.lastSeen = new Date();
 
@@ -308,6 +311,50 @@ export class UserService {
       .getOne();
     if (!user) throw new NotFoundException('User Not Found');
     else return user;
+  }
+
+  async handleAvatarGet(uuid: string): Promise<void> {
+    await access(`./data/avatar/user/${uuid}${config.avatarType}`).catch((err) => {
+      throw new NotFoundException('Avatar Not Found');
+    });
+  }
+
+  /**
+   * Function to handle an avatar upload
+   *
+   * @param file uploaded file
+   *
+   * @param payload payload of user jwt
+   *
+   * @returns Promise<void>
+   */
+
+  async handleAvatarUpload(file: Express.Multer.File, payload: TokenPayload): Promise<void> {
+    if (!file) throw new BadRequestException('Invalid File');
+    const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
+    if (!user) throw new NotFoundException('User Not Found');
+    user.avatar = user.uuid;
+    await this.userRepository.save(user);
+  }
+
+  /**
+   * Function to handle an avatar deletion
+   *
+   * @param payload payload of user jwt
+   *
+   * @returns Promise<void>
+   */
+
+  async handleAvatarDelete(payload: TokenPayload): Promise<void> {
+    try {
+      const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
+      if (!user) throw new NotFoundException('User Not Found');
+      unlinkSync(`./data/avatar/user/${payload.user}${config.avatarType}`);
+      user.avatar = null;
+      await this.userRepository.save(user);
+    } catch (exception) {
+      throw new NotFoundException('Avatar Not Found');
+    }
   }
 
   /**

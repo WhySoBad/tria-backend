@@ -241,7 +241,9 @@ export class ChatController {
   async getPreview(@Param('uuid', new ParseUUIDPipe()) uuid: string): Promise<ChatPreview> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
-      if (chat instanceof HttpException) throw chat;
+      if (chat.type === ChatType.PRIVATE_GROUP) {
+        throw new BadRequestException("Can't Get Preview Of Private Group");
+      }
       return {
         uuid: chat.uuid,
         type: chat.type,
@@ -273,11 +275,8 @@ export class ChatController {
   ): Promise<any> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
-      if (chat.type == ChatType.PRIVATE) {
-        const member: ChatMember | undefined = chat.members.find((member: ChatMember) => {
-          member.userUuid == payload.user;
-        });
-        if (!member) throw new BadRequestException('User Has To Be Member Of Private Chat');
+      if (!chat.members.map(({ userUuid }) => userUuid).includes(payload.user)) {
+        throw new BadRequestException('User Has To Be Member Of Chat');
       }
 
       const admins: Array<ChatAdmin> = chat.admins;
@@ -300,15 +299,17 @@ export class ChatController {
           };
           return {
             joinedAt: member.joinedAt,
+            role: GroupRole[member.role],
             user: {
               uuid: user.uuid,
               createdAt: user.createdAt,
-              role: GroupRole[member.role],
+              lastSeen: user.lastSeen,
               name: user.name,
               tag: user.tag,
               description: user.description,
               avatar: user.avatar,
               locale: user.locale,
+              online: user.online,
             },
             ...{ admin },
           };
@@ -336,7 +337,6 @@ export class ChatController {
               tag: user.tag,
               description: user.description,
               avatar: user.avatar,
-              locale: user.locale,
             },
           };
         }),

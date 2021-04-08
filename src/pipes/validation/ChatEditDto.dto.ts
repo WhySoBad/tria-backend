@@ -11,8 +11,8 @@ export class ChatEditDto {
 
   @IsOptional()
   @IsString()
-  @ValidateIf((type) => type === 'PUBLIC_GROUP' || type === 'PRIVATE_GROUP')
-  type: 'PUBLIC_GROUP' | 'PRIVATE_GROUP';
+  @ValidateIf((type) => type === 'GROUP' || type === 'PRIVATE_GROUP')
+  type: 'GROUP' | 'PRIVATE_GROUP';
 
   @IsOptional()
   @IsString()

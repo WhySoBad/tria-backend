@@ -5,7 +5,7 @@ export enum GroupRole {
 }
 
 export enum ChatType {
-  PUBLIC_GROUP = 0,
+  GROUP = 0,
   PRIVATE = 1,
   PRIVATE_GROUP = 2,
 }
@@ -14,8 +14,8 @@ export enum Permission {
   KICK = 0, //kick users
   BAN = 1, //ban users
   UNBAN = 2, //unban users
-  EDIT = 3, //edit chat
-  USERS = 4, //edit users
+  CHAT_EDIT = 3, //edit chat
+  MEMBER_EDIT = 4, //edit users
 }
 
 export interface ChatPreview {
@@ -36,9 +36,10 @@ export enum ChatEvent {
   CHAT_DELETE = 'CHAT_DELETE',
   MEMBER_JOIN = 'MEMBER_JOIN',
   MEMBER_LEAVE = 'MEMBER_LEAVE',
-  MEMBER_ONLINE = "MEMBER_ONLINE",
-  MEMBER_OFFLINE = "MEMBER_OFFLINE",
-  MEMBER_BANNED = 'MEMBER_BANNED',
+  MEMBER_ONLINE = 'MEMBER_ONLINE',
+  MEMBER_OFFLINE = 'MEMBER_OFFLINE',
+  MEMBER_BAN = 'MEMBER_BAN',
+  MEMBER_UNBAN = 'MEMBER_UNBAN',
   ACTION_SUCCESS = 'ACTION_SUCCESS',
   ACTION_ERROR = 'ACTION_ERROR',
 }

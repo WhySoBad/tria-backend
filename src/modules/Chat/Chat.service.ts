@@ -322,7 +322,7 @@ export class ChatService {
 
     await this.bannedMemberRepository.save(banned);
     await this.chatMemberRepository.remove(member);
-    this.chatGateway.handleGroupUserBan(chat.uuid, member.userUuid);
+    this.chatGateway.handleMemberBan(chat.uuid, member.userUuid);
   }
 
   /**
@@ -377,6 +377,7 @@ export class ChatService {
     if (!member) throw new NotFoundException('User Not Found');
 
     await this.bannedMemberRepository.remove(member);
+    this.chatGateway.handleMemberUnban(chat.uuid, member.userUuid);
   }
 
   /**
@@ -529,7 +530,7 @@ export class ChatService {
       });
       if (!admin) throw new NotFoundException('Admin Not Found In Group');
       const hasPermission: boolean = !!admin.permissions.find((permission: AdminPermission) => {
-        return permission.permission === Permission.EDIT;
+        return permission.permission === Permission.CHAT_EDIT;
       });
       if (!hasPermission) throw new UnauthorizedException('Lacking Permissions');
     }
@@ -631,7 +632,7 @@ export class ChatService {
       });
       if (!admin) throw new NotFoundException('Admin Not Found');
       const canEdit: boolean = !!admin.permissions.find((permission: AdminPermission) => {
-        return permission.permission == Permission.USERS;
+        return permission.permission == Permission.MEMBER_EDIT;
       });
       if (!canEdit) throw new UnauthorizedException('Lacking Permissions');
       if (roleId === GroupRole.OWNER) throw new BadRequestException("Admin Can't Set Owner");

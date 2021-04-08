@@ -130,6 +130,7 @@ export class AuthService {
       .getOne();
     if (!user) throw new NotFoundException('User Not Found');
     user.online = false;
+    user.lastSeen = new Date();
     await this.userRepository.save(user);
     return user;
   }
