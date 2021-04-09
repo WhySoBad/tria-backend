@@ -3,5 +3,5 @@ import { IsNotEmpty, IsUUID } from 'class-validator';
 export class PrivateChatDto {
   @IsNotEmpty()
   @IsUUID(4)
-  readonly uuid: string;
+  readonly user: string;
 }

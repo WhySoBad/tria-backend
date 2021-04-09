@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -51,7 +50,7 @@ export class ChatController {
     @Body() body: PrivateChatDto
   ): Promise<void> {
     try {
-      await this.chatService.handlePrivateCreate(body.uuid, payload);
+      await this.chatService.handlePrivateCreate(body.user, payload);
     } catch (exception) {
       throw exception;
     }

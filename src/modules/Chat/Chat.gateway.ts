@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   Body,
+  Controller,
   forwardRef,
   Inject,
   Injectable,
+  NotFoundException,
   UseFilters,
   UseGuards,
   UsePipes,
@@ -17,14 +19,14 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Repository } from 'typeorm';
+import { Admin, Repository } from 'typeorm';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import { ChatEvent, ChatType, GroupRole } from './Chat.interface';
+import { Permission, ChatEvent, ChatType, GroupRole } from './Chat.interface';
 import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { ChatService } from './Chat.service';
@@ -34,8 +36,12 @@ import AuthGuard from '../../guards/AuthGuard';
 import { ChatEditDto } from '../../pipes/validation/ChatEditDto.dto';
 import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
 import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
+import { AdminPermission } from '../../entities/AdminPermission.entity';
+import { BannedMember } from '../../entities/BannedMember.entity';
 
 @WebSocketGateway()
+@UseFilters(WsExceptionFilter)
+@UsePipes(new ValidationPipe({ whitelist: true }))
 @Injectable()
 export class ChatGateway {
   constructor(
@@ -58,8 +64,6 @@ export class ChatGateway {
 
   @SubscribeMessage(ChatEvent.MESSAGE)
   @UseGuards(AuthGuard)
-  @UsePipes(new ValidationPipe({ whitelist: true }))
-  @UseFilters(WsExceptionFilter)
   async handleMessage(
     @Authorization() payload: TokenPayload,
     @Body() body: MessageDto,
@@ -95,9 +99,7 @@ export class ChatGateway {
    */
 
   @SubscribeMessage(ChatEvent.CHAT_EDIT)
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
-  @UseFilters(WsExceptionFilter)
   async handleChatEdit(
     @Authorization() payload: TokenPayload,
     @Body() body: ChatEditDto,
@@ -131,9 +133,7 @@ export class ChatGateway {
    */
 
   @SubscribeMessage(ChatEvent.MESSAGE_EDIT)
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
-  @UseFilters(WsExceptionFilter)
   async handleMessageEdit(
     @Authorization() payload: TokenPayload,
     @Body() body: MessageEditDto,
@@ -170,15 +170,12 @@ export class ChatGateway {
    */
 
   @SubscribeMessage(ChatEvent.MEMBER_EDIT)
-  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(AuthGuard)
-  @UseFilters(WsExceptionFilter)
   async handleMemberEdit(
     @Authorization() payload: TokenPayload,
     @Body() body: MemberEditDto,
     @ConnectedSocket() client: Socket
   ): Promise<void> {
-    console.log(body);
     try {
       const member:
         | Array<ChatMember>
@@ -235,6 +232,10 @@ export class ChatGateway {
 
   async handleChatDelete(chatUuid: string): Promise<void> {
     this.server.to(chatUuid).emit(ChatEvent.CHAT_DELETE, { chat: chatUuid });
+    const sockets: Array<Socket> = Object.values(this.server.to(chatUuid).sockets);
+    for await (const socket of sockets) {
+      await new Promise((resolve) => socket.leave(chatUuid, resolve));
+    }
   }
 
   /**
@@ -332,14 +333,13 @@ export class ChatGateway {
    *
    * when a new member was banned from the chat
    *
-   * @param chatUuid uuid of Chat
+   * @param chatUuid uuid of the chat
    *
-   * @param userUuid uuid of User
+   * @param userUuid uuid of the user
    *
    * @returns Promise<void>
    */
 
-  @UseFilters(WsExceptionFilter)
   async handleMemberBan(chatUuid: string, userUuid: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
@@ -359,23 +359,172 @@ export class ChatGateway {
     }
   }
 
-  @UseFilters(WsExceptionFilter)
+  /**
+   * Handler to emit websockets to all online chat members and the banned member
+   *
+   * @param chatUuid uuid of the chat
+   *
+   * @param userUuid uuid of the user
+   *
+   * @returns Promise<void>
+   */
+
   async handleMemberUnban(chatUuid: string, userUuid: string): Promise<void> {
-    const sockets: { [id: string]: Socket } = this.server.clients().sockets;
-    for (let socket in sockets) {
-      const client: Socket = sockets[socket];
+    try {
+      const client: Socket | undefined = await this.getSocketForUser(userUuid);
+      if (!client) throw new NotFoundException('User Not Found');
+      client.emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
+    } catch (exception) {
+      throw exception;
+    }
+    this.server.to(chatUuid).emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
+  }
+
+  /**
+   * Handler to emit websockets to all online members of the new private chat
+   *
+   * @param chat new created chat
+   *
+   * @returns Promise<void>
+   */
+
+  async handlePrivateCreate(chat: Chat): Promise<void> {
+    await Promise.all(
+      chat.members.map(async (member: ChatMember) => {
+        try {
+          const client: Socket | undefined = await this.getSocketForUser(member.userUuid);
+          if (!client) return;
+          await new Promise((resolve) => client.join(chat.uuid, resolve));
+        } catch (exception) {
+          throw exception;
+        }
+      })
+    );
+    this.server.to(chat.uuid).emit(ChatEvent.PRIVATE_CREATE, {
+      uuid: chat.uuid,
+      type: ChatType[chat.type],
+      messages: [],
+      members: chat.members.map((member: ChatMember) => {
+        const user: User = member.user;
+        return {
+          joinedAt: member.joinedAt,
+          role: GroupRole[member.role],
+          user: {
+            uuid: user.uuid,
+            createdAt: user.createdAt,
+            lastSeen: user.lastSeen,
+            name: user.name,
+            tag: user.tag,
+            description: user.description,
+            avatar: user.avatar,
+            locale: user.locale,
+            online: user.online,
+          },
+        };
+      }),
+    });
+  }
+
+  async handleGroupCreate(chat: Chat): Promise<void> {
+    await Promise.all(
+      chat.members.map(async (member: ChatMember) => {
+        try {
+          const client: Socket | undefined = await this.getSocketForUser(member.userUuid);
+          if (!client) return;
+          await new Promise((resolve) => client.join(chat.uuid, resolve));
+        } catch (exception) {
+          throw exception;
+        }
+      })
+    );
+
+    const admins: Array<ChatAdmin> = chat.admins;
+
+    this.server.to(chat.uuid).emit(ChatEvent.GROUP_CREATE, {
+      uuid: chat.uuid,
+      type: ChatType[chat.type],
+      name: chat.name,
+      tag: chat.tag,
+      description: chat.description,
+      members: chat.members.map((member: ChatMember) => {
+        const user: User = member.user;
+        const chatAdmin: ChatAdmin | undefined = admins?.find((admin: ChatAdmin) => {
+          return admin.userUuid == user.uuid;
+        });
+        const admin: any = chatAdmin && {
+          promotedAt: chatAdmin.promotedAt,
+          permissions: chatAdmin.permissions.map((perm: AdminPermission) => {
+            return Permission[perm.permission];
+          }),
+        };
+        return {
+          joinedAt: member.joinedAt,
+          role: GroupRole[member.role],
+          user: {
+            uuid: user.uuid,
+            createdAt: user.createdAt,
+            lastSeen: user.lastSeen,
+            name: user.name,
+            tag: user.tag,
+            description: user.description,
+            avatar: user.avatar,
+            locale: user.locale,
+            online: user.online,
+          },
+          ...{ admin },
+        };
+      }),
+      messages: chat.messages.map((message: Message) => {
+        return {
+          uuid: message.uuid,
+          sender: message.userUuid,
+          chat: message.chatUuid,
+          createdAt: message.createdAt,
+          editedAt: message.editedAt,
+          edited: message.edited,
+          pinned: message.pinned,
+          text: message.text,
+        };
+      }),
+      banned: chat.banned.map((member: BannedMember) => {
+        const user: User = member.user;
+        return {
+          bannedAt: member.bannedAt,
+          user: {
+            uuid: user.uuid,
+            createdAt: user.createdAt,
+            name: user.name,
+            tag: user.tag,
+            description: user.description,
+            avatar: user.avatar,
+          },
+        };
+      }),
+    });
+  }
+
+  /**
+   * Function to get a connected socket by the user uuid
+   *
+   * @param uuid uuid of the user
+   *
+   * @returns Promise<Socket | undefined>
+   */
+
+  private async getSocketForUser(uuid: string): Promise<Socket | undefined> {
+    const sockets: Array<Socket> = Object.values(this.server.clients().sockets);
+    for (const client of sockets) {
       const token: string = client.handshake.headers.authorization;
       try {
         const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
-        if (!payload) throw new BadRequestException('Invalid Token');
+        if (!payload) continue;
         const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-        if (banned) throw new BadRequestException('Token Is Banned');
-        if (payload.user == userUuid) client.join(chatUuid);
-
-        this.server.to(chatUuid).emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
+        if (banned) continue;
+        if (payload.user === uuid) return client;
       } catch (exception) {
         throw exception;
       }
     }
+    return undefined;
   }
 }

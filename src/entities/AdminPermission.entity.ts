@@ -11,7 +11,9 @@ export class AdminPermission {
 
   @Column('uuid') userUuid: string;
 
-  @ManyToOne(() => ChatAdmin, (chatAdmin) => chatAdmin.permissions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ChatAdmin, (chatAdmin) => chatAdmin.permissions, {
+    onDelete: 'CASCADE',
+  })
   @JoinTable({ name: 'admin_permission' })
   @JoinColumn([
     { name: 'chatUuid', referencedColumnName: 'chatUuid' },

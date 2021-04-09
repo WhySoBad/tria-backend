@@ -79,18 +79,19 @@ export class ChatService {
     }
 
     const chat: Chat = new Chat();
-    const participants: Array<ChatMember> = [];
-    participants[0] = new ChatMember();
-    participants[0].user = user;
-    participants[0].chat = chat;
-    participants[1] = new ChatMember();
-    participants[1].user = participant;
-    participants[1].chat = chat;
+    const creator: ChatMember = new ChatMember();
+    creator.user = user;
+    creator.chat = chat;
+    const member: ChatMember = new ChatMember();
+    member.user = participant;
+    member.chat = chat;
 
     chat.type = ChatType.PRIVATE;
-    chat.members = participants;
+    chat.members = [creator, member];
     await this.chatRepository.save(chat);
-    await this.chatMemberRepository.save(participants);
+    await this.chatMemberRepository.save(chat.members);
+
+    await this.chatGateway.handlePrivateCreate(chat);
   }
 
   /**
@@ -109,12 +110,13 @@ export class ChatService {
     });
     if (!user) throw new NotFoundException('User Not Found');
 
-    const users: Array<User> = [];
-    for (const uuid of settings.members) {
+    const users: Array<{ user: User; role: number }> = [];
+    for await (const { uuid, role } of settings.members) {
+      const roleId: number = GroupRole[role as any] as any;
       const user: User | undefined = await this.userRepository.findOne({
         uuid: uuid,
       });
-      if (user) users.push(user);
+      if (user) users.push({ user: user, role: roleId });
     }
 
     const existing:
@@ -127,10 +129,11 @@ export class ChatService {
     if (existing) throw new BadRequestException('Group Tag Has To Be Unique');
 
     const chat: Chat = new Chat();
-    const participants: Array<ChatMember> = users.map((user: User) => {
+    const participants: Array<ChatMember> = users.map(({ user, role }) => {
       const participant: ChatMember = new ChatMember();
       participant.user = user;
       participant.chat = chat;
+      participant.role = role;
       return participant;
     });
 
@@ -139,13 +142,30 @@ export class ChatService {
     owner.chat = chat;
     owner.role = GroupRole.OWNER;
     chat.type = ChatType[settings.type] as any;
-    chat.members = participants;
+    chat.members = [];
     chat.name = settings.name;
     chat.tag = settings.tag;
     chat.description = settings.description;
 
     await this.chatRepository.save(chat);
-    await this.chatMemberRepository.save(participants);
+
+    for await (const member of participants) {
+      if (member.role !== GroupRole.ADMIN) continue;
+      const admin: ChatAdmin = new ChatAdmin();
+      admin.chat = chat;
+      admin.user = member.user;
+      admin.permissions = [];
+      await this.chatAdminRepository.save(admin);
+    }
+
+    chat.members = [...participants, owner];
+    await this.chatMemberRepository.save([...participants, owner]);
+
+    await this.chatRepository.save(chat);
+
+    const finalChat: Chat | undefined = await this.handleGet(chat.uuid);
+
+    if (finalChat) await this.chatGateway.handleGroupCreate(finalChat);
   }
 
   /**

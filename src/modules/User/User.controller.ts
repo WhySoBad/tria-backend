@@ -144,7 +144,6 @@ export class UserController {
   @Post('edit')
   @UseGuards(AuthGuard)
   async edit(@Body() user: EditUserDto, @Authorization() payload: TokenPayload): Promise<void> {
-    console.log(user);
     try {
       await this.userService.handleEdit(user, payload);
     } catch (exception) {
