@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
   UseGuards,
@@ -14,6 +15,7 @@ import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
+import { MemberLog } from '../../entities/MemberLog.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
@@ -258,6 +260,61 @@ export class ChatController {
   }
 
   /**
+   * Route to get a specific amount of messages before a certain timestamp
+   *
+   * @param payload payload of user jwt
+   *
+   * @param uuid uuid of Chat
+   *
+   * @param timestamp timestamp
+   *
+   * @param amount amount of messages
+   *
+   * @returns Promise<any>
+   */
+
+  @Get(':uuid/messages/:timestamp/:amount')
+  @UseGuards(AuthGuard)
+  async getMessages(
+    @Authorization() payload: TokenPayload,
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Param('timestamp', new ParseIntPipe()) timestamp: number,
+    @Param('amount', new ParseIntPipe()) amount: number
+  ): Promise<any> {
+    try {
+      const chat: Chat = await this.chatService.handleGet(uuid);
+      if (!chat.members.map(({ userUuid }) => userUuid).includes(payload.user)) {
+        throw new BadRequestException('User Has To Be Member Of Chat');
+      }
+      const messages: Array<any> = chat.messages
+        .filter((message: Message) => {
+          return message.createdAt.getTime() < timestamp;
+        })
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map((message: Message) => {
+          return {
+            uuid: message.uuid,
+            sender: message.userUuid,
+            chat: message.chatUuid,
+            createdAt: message.createdAt,
+            editedAt: message.editedAt,
+            edited: message.edited,
+            pinned: message.pinned,
+            text: message.text,
+          };
+        });
+
+      const last: boolean = messages.length <= amount;
+      return {
+        messages: last ? messages : messages.slice(0, amount),
+        last: last,
+      };
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
    * Route to get a specific chat
    *
    * @param payload payload of user jwt
@@ -278,6 +335,8 @@ export class ChatController {
         throw new BadRequestException('User Has To Be Member Of Chat');
       }
 
+      const messages = await this.getMessages(payload, uuid, new Date().getTime(), 25);
+
       const admins: Array<ChatAdmin> = chat.admins;
       return {
         uuid: chat.uuid,
@@ -285,6 +344,7 @@ export class ChatController {
         name: chat.name,
         tag: chat.tag,
         description: chat.description,
+        createdAt: chat.createdAt,
         members: chat.members.map((member: ChatMember) => {
           const user: User = member.user;
           const chatAdmin: ChatAdmin | undefined = admins?.find((admin: ChatAdmin) => {
@@ -313,18 +373,7 @@ export class ChatController {
             ...{ admin },
           };
         }),
-        messages: chat.messages.map((message: Message) => {
-          return {
-            uuid: message.uuid,
-            sender: message.userUuid,
-            chat: message.chatUuid,
-            createdAt: message.createdAt,
-            editedAt: message.editedAt,
-            edited: message.edited,
-            pinned: message.pinned,
-            text: message.text,
-          };
-        }),
+        messages: messages.messages,
         banned: chat.banned.map((member: BannedMember) => {
           const user: User = member.user;
           return {
@@ -337,6 +386,14 @@ export class ChatController {
               description: user.description,
               avatar: user.avatar,
             },
+          };
+        }),
+        memberLog: chat.memberLog.map((memberLog: MemberLog) => {
+          return {
+            user: memberLog.userUuid,
+            chat: memberLog.chatUuid,
+            timestamp: memberLog.timestamp,
+            joined: memberLog.joined,
           };
         }),
       };

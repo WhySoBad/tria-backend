@@ -1,5 +1,5 @@
 import { BadRequestException, createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { TokenPayload, TokenType } from '../modules/Auth/Jwt/Jwt.interface';
+import { TokenPayload } from '../modules/Auth/Jwt/Jwt.interface';
 import { JwtService } from '../modules/Auth/Jwt/Jwt.service';
 
 /**
@@ -18,7 +18,7 @@ const Authorization = createParamDecorator(
     if (context.getType() == 'http') {
       token = context.switchToHttp().getRequest().headers.authorization;
     } else if (context.getType() == 'ws') {
-      token = context.switchToHttp().getRequest().handshake.headers.authorization;
+      token = parseCookies(context.switchToWs().getClient().handshake.headers.cookie)?.token;
     }
     token?.replace('Bearer ', '');
     if (!token) throw new BadRequestException('Missing Token');
@@ -27,4 +27,23 @@ const Authorization = createParamDecorator(
     else return payload;
   }
 );
+
+/**
+ * Function to parse the cookies of an incoming request
+ *
+ * @param cookies cookies string
+ *
+ * @returns object
+ */
+
+const parseCookies: (cookies: string) => { [name: string]: string } = (cookies: string) => {
+  const split: Array<string> = cookies.split('; ');
+  const parsed: { [name: string]: string } = {};
+  split.forEach((cookie: string) => {
+    const split: Array<string> = cookie.split('=');
+    parsed[split[0]] = split[1];
+  });
+  return parsed;
+};
+
 export default Authorization;

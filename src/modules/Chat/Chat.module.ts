@@ -5,6 +5,7 @@ import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
+import { MemberLog } from '../../entities/MemberLog.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import { AuthModule } from '../Auth/Auth.module';
@@ -22,12 +23,11 @@ import { ChatService } from './Chat.service';
       ChatAdmin,
       AdminPermission,
       Message,
+      MemberLog,
     ]),
     AuthModule,
   ],
-  exports: [
-    
-  ],
+  exports: [],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],
 })

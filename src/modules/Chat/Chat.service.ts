@@ -12,6 +12,7 @@ import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
+import { MemberLog } from '../../entities/MemberLog.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import { ChatEditDto } from '../../pipes/validation/ChatEditDto.dto';
@@ -31,6 +32,7 @@ export class ChatService {
     @InjectRepository(BannedMember) private bannedMemberRepository: Repository<BannedMember>,
     @InjectRepository(Message) private messageRepository: Repository<Message>,
     @InjectRepository(ChatAdmin) private chatAdminRepository: Repository<ChatAdmin>,
+    @InjectRepository(MemberLog) private memberLogRepository: Repository<MemberLog>,
     @InjectRepository(AdminPermission)
     private adminPermissionRepository: Repository<AdminPermission>,
     private chatGateway: ChatGateway
@@ -88,7 +90,19 @@ export class ChatService {
 
     chat.type = ChatType.PRIVATE;
     chat.members = [creator, member];
+
     await this.chatRepository.save(chat);
+
+    for await (const member of chat.members) {
+      const log: MemberLog = new MemberLog();
+      log.chat = chat;
+      log.chatUuid = chat.uuid;
+      log.user = member.user;
+      log.userUuid = member.userUuid;
+      log.joined = true;
+      await this.memberLogRepository.save(log);
+    }
+
     await this.chatMemberRepository.save(chat.members);
 
     await this.chatGateway.handlePrivateCreate(chat);
@@ -161,6 +175,14 @@ export class ChatService {
     chat.members = [...participants, owner];
     await this.chatMemberRepository.save([...participants, owner]);
 
+    for await (const member of chat.members) {
+      const log: MemberLog = new MemberLog();
+      log.chat = chat;
+      log.user = member.user;
+      log.joined = true;
+      await this.memberLogRepository.save(log);
+    }
+
     await this.chatRepository.save(chat);
 
     const finalChat: Chat | undefined = await this.handleGet(chat.uuid);
@@ -206,6 +228,12 @@ export class ChatService {
     });
     if (!user) throw new NotFoundException('User Not Found');
 
+    const log: MemberLog = new MemberLog();
+    log.chat = chat;
+    log.user = user;
+    log.joined = true;
+    await this.memberLogRepository.save(log);
+
     const member: ChatMember = new ChatMember();
     member.chat = chat;
     member.user = user;
@@ -244,6 +272,12 @@ export class ChatService {
     if (user.role == GroupRole.OWNER) {
       throw new BadRequestException("Owner Can't Leave The Group");
     }
+
+    const log: MemberLog = new MemberLog();
+    log.chat = chat;
+    log.user = user.user;
+    log.joined = false;
+    await this.memberLogRepository.save(log);
 
     await this.chatMemberRepository.remove(user);
     this.chatGateway.handleGroupUserLeave(chat.uuid, payload.user, payload);
@@ -468,6 +502,7 @@ export class ChatService {
       .leftJoinAndSelect('banned.user', 'banned_user')
       .leftJoinAndSelect('chat.admins', 'admins')
       .leftJoinAndSelect('admins.permissions', 'permissions')
+      .leftJoinAndSelect('chat.memberLog', 'memberLog')
       .getOne();
     if (!chat) throw new NotFoundException('Chat Not Found');
     return chat;

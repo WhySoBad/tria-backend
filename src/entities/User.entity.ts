@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { BannedMember } from './BannedMember.entity';
 import { ChatMember } from './ChatMember.entity';
+import { MemberLog } from './MemberLog.entity';
 import { Message } from './Message.entity';
 
 @Entity()
@@ -37,6 +38,10 @@ export class User {
   @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   @JoinTable({ name: 'chat_member' })
   chats: Array<ChatMember>;
+
+  @OneToMany(() => MemberLog, (memberLog) => memberLog.user)
+  @JoinTable({ name: 'member_log' })
+  chatLog: Array<MemberLog>;
 
   @OneToMany(() => BannedMember, (bannedMember) => bannedMember.user)
   @JoinTable({ name: 'banned_member' })

@@ -34,7 +34,8 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private logger: Logger = new Logger('AppGateway');
 
   async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
-    const token: string = client.handshake.headers.authorization;
+    const cookies: { [name: string]: string } = this.parseCookies(client.handshake.headers.cookie);
+    const token: string = cookies.token;
     if (!token) client.error(new BadRequestException('Missing Token').getResponse());
     if ((await this.timesOnline(token)) > 1) {
       client.error(new BadRequestException('User Is Already Online').getResponse());
@@ -64,7 +65,8 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
 
   async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
-    const token: string = client.handshake.headers.authorization;
+    const cookies: { [name: string]: string } = this.parseCookies(client.handshake.headers.cookie);
+    const token: string = cookies.token;
     if (!token) return client.error(new BadRequestException('Missing Token').getResponse());
     if ((await this.timesOnline(token)) === 0) {
       try {
@@ -122,14 +124,35 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private async timesOnline(token: string): Promise<number> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) return 0;
+
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
-    const user: Array<Socket> = Object.values(sockets).filter(
-      ({
-        handshake: {
-          headers: { authorization },
-        },
-      }) => JwtService.DecodeToken(authorization)?.user === payload?.user
-    );
-    return user.length;
+    let online: number = 0;
+    for (let socket in sockets) {
+      const client: Socket = sockets[socket];
+      const token: string = this.parseCookies(client.handshake.headers.cookie).token;
+      if (token) {
+        const { user }: TokenPayload | any = JwtService.DecodeToken(token) || {};
+        if (payload.user === user) online++;
+      }
+    }
+    return online;
   }
+
+  /**
+   * Function to parse the cookies of an incoming request
+   *
+   * @param cookies cookies string
+   *
+   * @returns object
+   */
+
+  private parseCookies: (cookies: string) => { [name: string]: string } = (cookies: string) => {
+    const split: Array<string> = cookies?.split('; ') || [];
+    const parsed: { [name: string]: string } = {};
+    split.forEach((cookie: string) => {
+      const split: Array<string> = cookie.split('=');
+      parsed[split[0]] = split[1];
+    });
+    return parsed;
+  };
 }
