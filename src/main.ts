@@ -17,8 +17,7 @@ async function bootstrap(): Promise<void> {
     methods: 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS',
     preflightContinue: false,
     optionsSuccessStatus: 204,
-    credentials: true,
-    allowedHeaders: ['Accept', 'Content-Type', 'Authorization'],
+    //    allowedHeaders: ['Accept', 'Content-Type', 'Authorization'],
   });
   app.listen(3000);
 }
