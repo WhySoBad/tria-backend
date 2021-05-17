@@ -12,12 +12,21 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.useStaticAssets(join(__dirname, '..', 'static'));
-  app.enableCors({
+  /*   app.enableCors({
     origin: true,
     methods: 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS',
     preflightContinue: false,
     optionsSuccessStatus: 204,
     //    allowedHeaders: ['Accept', 'Content-Type', 'Authorization'],
+  }); */
+  app.use((req: any, res: any, next: any) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+    );
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
   });
   app.listen(3000);
 }
