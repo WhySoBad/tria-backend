@@ -46,7 +46,7 @@ export class UserService {
     let user: PendingUser = new PendingUser();
     const hashed: string = await JwtService.Hash(settings.password);
 
-    user.mail = settings.mail.replace(' ', '');
+    user.mail = settings.mail.replace(' ', '').toLowerCase();
     user.password = hashed;
 
     const pendingExists: boolean = !!(await this.pendingUserRepository
@@ -62,6 +62,8 @@ export class UserService {
     if (pendingExists || userExists) {
       throw new BadRequestException('Mail Has To Be Unique');
     }
+
+    await this.pendingUserRepository.save(user);
 
     const token: string = JwtService.GenerateToken(
       {
@@ -79,8 +81,6 @@ export class UserService {
       text: token,
       html: `<div>${token}</div>`,
     });
-
-    await this.pendingUserRepository.save(user);
   }
 
   /**
@@ -129,6 +129,10 @@ export class UserService {
     if (userExists) throw new BadRequestException('Tag Has To Be Unique');
 
     const user: User = new User();
+    user.name = data.name;
+    user.description = data.description;
+    user.tag = data.tag;
+    user.locale = data.locale;
     user.mail = pending.mail;
     user.password = pending.password;
     user.createdAt = pending.createdAt;

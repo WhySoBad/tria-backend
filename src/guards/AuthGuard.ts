@@ -32,7 +32,7 @@ class AuthGuard implements CanActivate {
  */
 
 const parseCookies: (cookies: string) => { [name: string]: string } = (cookies: string) => {
-  const split: Array<string> = cookies.split('; ');
+  const split: Array<string> = cookies?.split('; ') || [];
   const parsed: { [name: string]: string } = {};
   split.forEach((cookie: string) => {
     const split: Array<string> = cookie.split('=');
