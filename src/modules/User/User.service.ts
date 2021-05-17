@@ -113,7 +113,7 @@ export class UserService {
   async handleVerify(data: RegisterVerifyDto): Promise<void> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(
       data.token,
-      TokenType.PASSWORD_RESET
+      TokenType.REGISTER
     );
     if (!payload) throw new BadRequestException('Invalid Registration Token');
 
