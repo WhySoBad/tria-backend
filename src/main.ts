@@ -14,6 +14,8 @@ async function bootstrap(): Promise<void> {
   app.useStaticAssets(join(__dirname, '..', 'static'));
   app.enableCors({
     origin: '*',
+    credentials: true,
+    preflightContinue: true,
   });
   app.listen(3000);
 }
