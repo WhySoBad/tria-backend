@@ -13,8 +13,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.useStaticAssets(join(__dirname, '..', 'static'));
   app.enableCors({
-    origin: '*',
-    methods: 'OPTIONS,GET,PUT,POST,DELETE',
+    origin: ['http://localhost:*', 'http://127.0.0.1:*'],
     credentials: true,
   });
   app.listen(3000);
