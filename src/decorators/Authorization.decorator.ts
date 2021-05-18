@@ -18,7 +18,7 @@ const Authorization = createParamDecorator(
     if (context.getType() == 'http') {
       token = context.switchToHttp().getRequest().headers.authorization;
     } else if (context.getType() == 'ws') {
-      token = parseCookies(context.switchToWs().getClient().handshake.headers.cookie)?.token;
+      token = context.switchToWs().getClient().handshake.headers.authorization;
     }
     token?.replace('Bearer ', '');
     if (!token) throw new BadRequestException('Missing Token');

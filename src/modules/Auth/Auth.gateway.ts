@@ -44,8 +44,7 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private logger: Logger = new Logger('AppGateway');
 
   async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
-    const cookies: { [name: string]: string } = this.parseCookies(client.handshake.headers.cookie);
-    const token: string = cookies.token;
+    const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');
     if (!token) client.error(new BadRequestException('Missing Token').getResponse());
     if ((await this.timesOnline(token)) > 1) {
       client.error(new BadRequestException('User Is Already Online').getResponse());
@@ -75,8 +74,7 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
 
   async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
-    const cookies: { [name: string]: string } = this.parseCookies(client.handshake.headers.cookie);
-    const token: string = cookies.token;
+    const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');
     if (!token) return client.error(new BadRequestException('Missing Token').getResponse());
     if ((await this.timesOnline(token)) === 0) {
       try {
@@ -139,7 +137,7 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let online: number = 0;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
-      const token: string = this.parseCookies(client.handshake.headers.cookie).token;
+      const token: string = client.handshake.headers.authorization;
       if (token) {
         const { user }: TokenPayload | any = JwtService.DecodeToken(token) || {};
         if (payload.user === user) online++;

@@ -11,7 +11,7 @@ class AuthGuard implements CanActivate {
     if (context.getType() == 'http') {
       token = context.switchToHttp().getRequest().headers.authorization;
     } else if (context.getType() == 'ws') {
-      token = parseCookies(context.switchToWs().getClient().handshake.headers.cookie)?.token;
+      token = context.switchToWs().getClient().handshake.headers.authorization;
     }
 
     if (!token) return false;
