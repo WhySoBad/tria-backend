@@ -44,6 +44,7 @@ import { BannedMember } from '../../entities/BannedMember.entity';
     const headers = {
       'Access-Control-Allow-Headers': 'Authorization',
       'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': false,
     };
     res.writeHead(200, headers);
     res.end();
