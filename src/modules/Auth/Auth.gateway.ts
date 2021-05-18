@@ -14,7 +14,17 @@ import { AuthService } from './Auth.service';
 import { TokenPayload } from './Jwt/Jwt.interface';
 import { JwtService } from './Jwt/Jwt.service';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  handlePreflightRequest: (req: any, res: any) => {
+    const headers = {
+      'Access-Control-Allow-Headers': 'Authorization',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
+    };
+    res.writeHead(200, headers);
+    res.end();
+  },
+})
 export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private authService: AuthService) {}
 

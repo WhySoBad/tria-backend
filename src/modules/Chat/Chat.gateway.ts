@@ -39,7 +39,17 @@ import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { BannedMember } from '../../entities/BannedMember.entity';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  handlePreflightRequest: (req: any, res: any) => {
+    const headers = {
+      'Access-Control-Allow-Headers': 'Authorization',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
+    };
+    res.writeHead(200, headers);
+    res.end();
+  },
+})
 @UseFilters(WsExceptionFilter)
 @UsePipes(new ValidationPipe({ whitelist: true }))
 @Injectable()
