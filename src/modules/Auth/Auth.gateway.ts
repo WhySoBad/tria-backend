@@ -18,8 +18,8 @@ import { JwtService } from './Jwt/Jwt.service';
   handlePreflightRequest: (req: any, res: any) => {
     const headers = {
       'Access-Control-Allow-Headers': 'Authorization',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Credentials': false,
+      'Access-Control-Allow-Origin': 'http://localhost:8000',
+      'Access-Control-Allow-Credentials': true,
     };
     res.writeHead(200, headers);
     res.end();
