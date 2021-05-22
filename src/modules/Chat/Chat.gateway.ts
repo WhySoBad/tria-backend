@@ -38,6 +38,7 @@ import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
 import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { BannedMember } from '../../entities/BannedMember.entity';
+import { MemberLog } from '../../entities/MemberLog.entity';
 
 @WebSocketGateway({
   handlePreflightRequest: (req: any, res: any) => {
@@ -413,7 +414,26 @@ export class ChatGateway {
     this.server.to(chat.uuid).emit(ChatEvent.PRIVATE_CREATE, {
       uuid: chat.uuid,
       type: ChatType[chat.type],
-      messages: [],
+      messages: chat.messages.map((message: Message) => {
+        return {
+          uuid: message.uuid,
+          sender: message.userUuid,
+          chat: message.chatUuid,
+          createdAt: message.createdAt,
+          editedAt: message.editedAt,
+          edited: message.edited,
+          pinned: message.pinned,
+          text: message.text,
+        };
+      }),
+      memberLog: chat.memberLog.map((memberLog: MemberLog) => {
+        return {
+          user: memberLog.userUuid,
+          chat: memberLog.chatUuid,
+          timestamp: memberLog.timestamp,
+          joined: memberLog.joined,
+        };
+      }),
       members: chat.members.map((member: ChatMember) => {
         const user: User = member.user;
         return {
@@ -456,6 +476,14 @@ export class ChatGateway {
       name: chat.name,
       tag: chat.tag,
       description: chat.description,
+      memberLog: chat.memberLog.map((memberLog: MemberLog) => {
+        return {
+          user: memberLog.userUuid,
+          chat: memberLog.chatUuid,
+          timestamp: memberLog.timestamp,
+          joined: memberLog.joined,
+        };
+      }),
       members: chat.members.map((member: ChatMember) => {
         const user: User = member.user;
         const chatAdmin: ChatAdmin | undefined = admins?.find((admin: ChatAdmin) => {
