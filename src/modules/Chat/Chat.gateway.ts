@@ -44,7 +44,7 @@ import { MemberLog } from '../../entities/MemberLog.entity';
   handlePreflightRequest: (req: any, res: any) => {
     const headers = {
       'Access-Control-Allow-Headers': 'Authorization',
-      'Access-Control-Allow-Origin': 'http://localhost:8000',
+      'Access-Control-Allow-Origin': req.headers.origin,
       'Access-Control-Allow-Credentials': true,
     };
     res.writeHead(200, headers);
