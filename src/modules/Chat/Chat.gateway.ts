@@ -293,11 +293,12 @@ export class ChatGateway {
 
     this.server.to(chatUuid).emit(ChatEvent.MEMBER_JOIN, {
       chat: chatUuid,
+      joinedAt: member.joinedAt,
+      role: GroupRole[member.role],
       user: {
         uuid: user.uuid,
-        joinedAt: member.joinedAt,
         createdAt: user.createdAt,
-        role: GroupRole[member.role],
+        lastSeen: user.lastSeen,
         name: user.name,
         tag: user.tag,
         description: user.description,
