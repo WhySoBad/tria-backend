@@ -178,7 +178,9 @@ export class ChatService {
     for await (const member of chat.members) {
       const log: MemberLog = new MemberLog();
       log.chat = chat;
+      log.chatUuid = chat.uuid;
       log.user = member.user;
+      log.userUuid = member.userUuid;
       log.joined = true;
       await this.memberLogRepository.save(log);
     }
@@ -230,7 +232,9 @@ export class ChatService {
 
     const log: MemberLog = new MemberLog();
     log.chat = chat;
+    log.chatUuid = chat.uuid;
     log.user = user;
+    log.userUuid = user.uuid;
     log.joined = true;
     await this.memberLogRepository.save(log);
 
@@ -275,8 +279,10 @@ export class ChatService {
 
     const log: MemberLog = new MemberLog();
     log.chat = chat;
+    log.chatUuid = chat.uuid;
     log.user = user.user;
-    log.joined = false;
+    log.userUuid = user.userUuid;
+    log.joined = true;
     await this.memberLogRepository.save(log);
 
     await this.chatMemberRepository.remove(user);
