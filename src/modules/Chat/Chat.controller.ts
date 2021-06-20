@@ -21,6 +21,7 @@ import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
 import { BanMemberDto } from '../../pipes/validation/BanMemberDto.dto';
 import { GroupChatDto } from '../../pipes/validation/GroupChatDto.dto';
+import { GroupTagDto } from '../../pipes/validation/GroupTagDto.dto';
 import { KickMemberDto } from '../../pipes/validation/KickMemberDto.dto';
 import { PrivateChatDto } from '../../pipes/validation/PrivateChatDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
@@ -79,6 +80,19 @@ export class ChatController {
     } catch (exception) {
       throw exception;
     }
+  }
+
+  /**
+   * Route to check whether a given tag exists
+   *
+   * @param body request body
+   *
+   * @returns Promise<boolean>
+   */
+
+  @Post('check/tag')
+  async verifyTag(@Body() body: GroupTagDto): Promise<boolean> {
+    return await this.chatService.handleTagVerify(body.tag);
   }
 
   /**

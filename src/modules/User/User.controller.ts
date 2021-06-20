@@ -14,9 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import Authorization from '../../decorators/Authorization.decorator';
-import { Chat } from '../../entities/Chat.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
-import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard';
 import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
@@ -36,7 +34,8 @@ import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
 import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
 import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
-import { access } from 'fs';
+import { UserTagDto } from '../../pipes/validation/UserTagDto.dto';
+import { UserMailDto } from '../../pipes/validation/UserMailDto.dto';
 
 const uploadConfig: MulterOptions = {
   fileFilter: (req: any, file: any, callback: any) => {
@@ -129,6 +128,32 @@ export class UserController {
     } catch (exception) {
       throw exception;
     }
+  }
+
+  /**
+   * Route to check whether a given tag exists
+   *
+   * @param body request body
+   *
+   * @returns Promise<boolean>
+   */
+
+  @Post('check/tag')
+  async checkTag(@Body() body: UserTagDto): Promise<boolean> {
+    return await this.userService.handleTagVerify(body.tag);
+  }
+
+  /**
+   * Route to check whether a given mail address exists
+   *
+   * @param body request body
+   *
+   * @returns Promise<boolean>
+   */
+
+  @Post('check/mail')
+  async checkMail(@Body() body: UserMailDto): Promise<boolean> {
+    return await this.userService.handleMailVerify(body.mail);
   }
 
   /**

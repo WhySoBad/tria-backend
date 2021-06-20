@@ -193,6 +193,21 @@ export class ChatService {
   }
 
   /**
+   * Function to check whether a given tag exists
+   *
+   * @param tag tag to be checked
+   *
+   * @returns Promise<boolean>
+   */
+
+  async handleTagVerify(tag: string): Promise<boolean> {
+    return !!(await this.chatRepository
+      .createQueryBuilder()
+      .where('LOWER(tag) = LOWER(:tag)', { tag: tag })
+      .getOne());
+  }
+
+  /**
    * Function to join a group
    *
    * @param chatUuid chat uuid

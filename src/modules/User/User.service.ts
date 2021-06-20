@@ -24,6 +24,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { unlinkSync } from 'fs';
 import { access } from 'fs/promises';
+import { UserTagDto } from '../../pipes/validation/UserTagDto.dto';
+import { UserMailDto } from '../../pipes/validation/UserMailDto.dto';
 
 @Injectable()
 export class UserService {
@@ -142,6 +144,36 @@ export class UserService {
 
     await this.pendingUserRepository.remove(pending);
     await this.userRepository.save(user);
+  }
+
+  /**
+   * Function to check whether a given tag exists
+   *
+   * @param tag tag to be checked
+   *
+   * @returns Promise<boolean>
+   */
+
+  async handleTagVerify(tag: string): Promise<boolean> {
+    return !!(await this.userRepository
+      .createQueryBuilder()
+      .where('LOWER(tag) = LOWER(:tag)', { tag: tag })
+      .getOne());
+  }
+
+  /**
+   * Function to check whether a given mail address exists
+   *
+   * @param mail mail address to be checked
+   *
+   * @returns Promise<boolean>
+   */
+
+  async handleMailVerify(mail: string): Promise<boolean> {
+    return !!(await this.userRepository
+      .createQueryBuilder()
+      .where('LOWER(mail) = LOWER(:mail)', { mail: mail })
+      .getOne());
   }
 
   /**
