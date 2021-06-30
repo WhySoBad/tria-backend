@@ -419,6 +419,7 @@ export class ChatController {
         type: ChatType[chat.type],
         name: chat.name,
         tag: chat.tag,
+        avatar: chat.avatar,
         description: chat.description,
         createdAt: chat.createdAt,
         members: chat.members.map((member: ChatMember) => {

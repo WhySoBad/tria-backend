@@ -4,3 +4,8 @@ export interface UserPreview {
   tag: string;
   description: string;
 }
+
+export enum UserEvent {
+  USER_EDIT = 'USER_EDIT',
+  USER_DELETE = 'USER_DELETE',
+}

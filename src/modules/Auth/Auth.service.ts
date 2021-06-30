@@ -84,10 +84,12 @@ export class AuthService {
    *
    * @param token user jwt
    *
+   * @param update boolean whether the user online status should be updated
+   *
    * @returns Promise<User>
    */
 
-  async handleConnect(token: string): Promise<User> {
+  async handleConnect(token: string, update: boolean = true): Promise<User> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
     const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
@@ -101,9 +103,10 @@ export class AuthService {
       .leftJoinAndSelect('chat.members', 'members')
       .getOne();
     if (!user) throw new NotFoundException('User Not Found');
-    user.online = true;
-    await this.userRepository.save(user);
-
+    if (update) {
+      user.online = true;
+      await this.userRepository.save(user);
+    }
     return user;
   }
 
@@ -112,10 +115,12 @@ export class AuthService {
    *
    * @param token user jwt
    *
+   * @param update boolean whether the user online status should be updated
+   *
    * @returns Promise<User>
    */
 
-  async handleDisconnect(token: string): Promise<User> {
+  async handleDisconnect(token: string, update: boolean = true): Promise<User> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
     const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
@@ -129,9 +134,11 @@ export class AuthService {
       .leftJoinAndSelect('chat.members', 'members')
       .getOne();
     if (!user) throw new NotFoundException('User Not Found');
-    user.online = false;
-    user.lastSeen = new Date();
-    await this.userRepository.save(user);
+    if (update) {
+      user.online = false;
+      user.lastSeen = new Date();
+      await this.userRepository.save(user);
+    }
     return user;
   }
 

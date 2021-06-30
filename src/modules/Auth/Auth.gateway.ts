@@ -36,8 +36,6 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    *
    * @param client websocket instance
    *
-   * @param payload payload of user jwt
-   *
    * @returns Promise<void>
    */
 

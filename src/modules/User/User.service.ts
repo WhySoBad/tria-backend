@@ -24,6 +24,11 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { unlinkSync } from 'fs';
 import { access } from 'fs/promises';
+import { UserGateway } from './User.gateway';
+import { Chat } from '../../entities/Chat.entity';
+import { ChatType } from '../Chat/Chat.interface';
+import { ChatService } from '../Chat/Chat.service';
+import { ChatMember } from '../../entities/ChatMember.entity';
 
 @Injectable()
 export class UserService {
@@ -31,7 +36,9 @@ export class UserService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(PendingUser)
     private pendingUserRepository: Repository<PendingUser>,
-    private readonly mailerService: MailerService
+    private mailerService: MailerService,
+    private userGateway: UserGateway,
+    private chatService: ChatService
   ) {}
 
   /**
@@ -210,6 +217,7 @@ export class UserService {
     if (data.locale) user.locale = data.locale;
 
     await this.userRepository.save(user);
+    await this.userGateway.handleUserEdit(user);
   }
 
   /**
@@ -318,6 +326,11 @@ export class UserService {
   async handleDelete(payload: TokenPayload): Promise<void> {
     const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
     if (!user) throw new NotFoundException('User Not Found');
+    await this.userGateway.handleUserDelete(user);
+    user.chats.forEach(async (member: ChatMember) => {
+      if (member.chat.type === ChatType.PRIVATE) await this.chatService.deleteChat(member.chat);
+      else await this.chatService.leaveChat(member.chat, member);
+    });
     await this.userRepository.remove(user);
   }
 
@@ -377,6 +390,7 @@ export class UserService {
     if (!user) throw new NotFoundException('User Not Found');
     user.avatar = user.uuid;
     await this.userRepository.save(user);
+    await this.userGateway.handleUserEdit(user);
   }
 
   /**
@@ -394,6 +408,7 @@ export class UserService {
       unlinkSync(`./data/avatar/user/${payload.user}${config.avatarType}`);
       user.avatar = null;
       await this.userRepository.save(user);
+      await this.userGateway.handleUserEdit(user);
     } catch (exception) {
       throw new NotFoundException('Avatar Not Found');
     }

@@ -27,7 +27,7 @@ import { ChatService } from './Chat.service';
     ]),
     AuthModule,
   ],
-  exports: [],
+  exports: [ChatService],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],
 })

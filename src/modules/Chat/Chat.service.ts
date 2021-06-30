@@ -271,16 +271,7 @@ export class ChatService {
       throw new BadRequestException("Owner Can't Leave The Group");
     }
 
-    const log: MemberLog = new MemberLog();
-    log.chat = chat;
-    log.chatUuid = chat.uuid;
-    log.user = user.user;
-    log.userUuid = user.userUuid;
-    log.joined = true;
-    await this.memberLogRepository.save(log);
-
-    await this.chatMemberRepository.remove(user);
-    this.chatGateway.handleGroupUserLeave(chat.uuid, payload.user, payload);
+    await this.leaveChat(chat, user);
   }
 
   /**
@@ -301,9 +292,7 @@ export class ChatService {
     if (chat.type !== ChatType.PRIVATE && user.role !== GroupRole.OWNER) {
       throw new UnauthorizedException('Only Owner Can Delete A Group');
     }
-
-    await this.chatRepository.remove(chat);
-    this.chatGateway.handleChatDelete(chat.uuid);
+    await this.deleteChat(chat);
   }
 
   /**
@@ -686,6 +675,7 @@ export class ChatService {
     if (!chat) throw new NotFoundException('Chat Not Found');
     chat.avatar = uuid;
     await this.chatRepository.save(chat);
+    await this.chatGateway.handleEdit(chat);
   }
 
   /**
@@ -714,6 +704,7 @@ export class ChatService {
       unlinkSync(`./data/avatar/group/${chatUuid}${config.avatarType}`);
       chat.avatar = null;
       await this.chatRepository.save(chat);
+      await this.chatGateway.handleEdit(chat);
     } catch (exception) {
       throw new NotFoundException('Avatar Not Found');
     }
@@ -811,5 +802,45 @@ export class ChatService {
         return permission === perm.permission;
       });
     } else return true;
+  }
+
+  /**
+   * Function to leave a chat
+   *
+   * Important: Internal use only
+   *
+   * @param chat chat
+   *
+   * @param member member
+   *
+   * @returns Promise<void>
+   */
+
+  async leaveChat(chat: Chat, member: ChatMember): Promise<void> {
+    const log: MemberLog = new MemberLog();
+    log.chat = chat;
+    log.chatUuid = chat.uuid;
+    log.user = member.user;
+    log.userUuid = member.userUuid;
+    log.joined = true;
+    await this.memberLogRepository.save(log);
+
+    await this.chatMemberRepository.remove(member);
+    this.chatGateway.handleGroupUserLeave(chat.uuid, member.userUuid);
+  }
+
+  /**
+   * Function to delete a chat
+   *
+   * Important: Internal use only
+   *
+   * @param chat chat
+   *
+   * @returns Promise<void>
+   */
+
+  async deleteChat(chat: Chat): Promise<void> {
+    await this.chatRepository.remove(chat);
+    this.chatGateway.handleChatDelete(chat.uuid);
   }
 }

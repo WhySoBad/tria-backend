@@ -117,13 +117,7 @@ export class ChatGateway {
   ): Promise<void> {
     try {
       const chat: Chat = await this.chatService.handleChatEdit(body.chat, body, payload);
-      this.server.to(body.chat).emit(ChatEvent.CHAT_EDIT, {
-        chat: body.chat,
-        tag: chat.tag,
-        name: chat.name,
-        description: chat.description,
-        type: ChatType[chat.type],
-      });
+      this.handleEdit(chat);
       if (body.actionUuid) {
         this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
       }
@@ -223,6 +217,25 @@ export class ChatGateway {
   }
 
   /**
+   * Handler to emit websockets when a chat was edited
+   *
+   * @param chat chat which was edited
+   *
+   * @returns Promise<void>
+   */
+
+  async handleEdit(chat: Chat): Promise<void> {
+    this.server.to(chat.uuid).emit(ChatEvent.CHAT_EDIT, {
+      chat: chat.uuid,
+      tag: chat.tag,
+      name: chat.name,
+      description: chat.description,
+      type: ChatType[chat.type],
+      avatar: chat.avatar,
+    });
+  }
+
+  /**
    * Handler to emit websockets to online chat members to remove
    *
    * the chat when the chat was deleted on runtime
@@ -309,23 +322,18 @@ export class ChatGateway {
    *
    * @param userUuid uuid of User
    *
-   * @param payload payload of user jwt
    *
    * @returns Promise<void>
    */
 
-  async handleGroupUserLeave(
-    chatUuid: string,
-    userUuid: string,
-    payload: TokenPayload
-  ): Promise<void> {
+  async handleGroupUserLeave(chatUuid: string, userUuid: string): Promise<void> {
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
       const clientToken: string = client.handshake.headers.authorization;
       if (clientToken) {
         const clientPayload: TokenPayload | undefined = JwtService.DecodeToken(clientToken);
-        if (clientPayload?.user == payload.uuid) client.leave(chatUuid);
+        if (clientPayload?.user === userUuid) client.leave(chatUuid);
       }
     }
     this.server.to(chatUuid).emit(ChatEvent.MEMBER_LEAVE, { chat: chatUuid, user: userUuid });
