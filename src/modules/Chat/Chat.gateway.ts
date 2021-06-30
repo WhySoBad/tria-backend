@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Body,
-  Controller,
   forwardRef,
   Inject,
   Injectable,
@@ -32,7 +31,7 @@ import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { ChatService } from './Chat.service';
 import { MessageDto } from '../../pipes/validation/MessageDto.dto';
 import Authorization from '../../decorators/Authorization.decorator';
-import AuthGuard from '../../guards/AuthGuard';
+import AuthGuard from '../../guards/AuthGuard.guard';
 import { ChatEditDto } from '../../pipes/validation/ChatEditDto.dto';
 import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
 import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
@@ -193,17 +192,7 @@ export class ChatGateway {
         | ChatMember
         | ChatAdmin = await this.chatService.handleMemberEdit(body.chat, body, payload);
 
-      if (member instanceof ChatAdmin) {
-        this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
-          chat: body.chat,
-          user: member.userUuid,
-          role: 'ADMIN',
-          permissions: member.permissions,
-        });
-        if (body.actionUuid) {
-          this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
-        }
-      } else if (Array.isArray(member)) {
+      if (Array.isArray(member)) {
         member.forEach((member: ChatMember) => {
           this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
             chat: body.chat,
@@ -211,20 +200,22 @@ export class ChatGateway {
             role: GroupRole[member.role],
             permissions: [],
           });
-          if (body.actionUuid) {
-            this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
-          }
         });
       } else {
+        const isAdmin: boolean = member instanceof ChatAdmin;
         this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
           chat: body.chat,
           user: member.userUuid,
-          role: GroupRole[member.role],
-          permissions: [],
+          role: isAdmin ? 'ADMIN' : GroupRole[(member as any).role],
+          permissions: isAdmin
+            ? (member as any).permissions.map(({ permission }: AdminPermission) => {
+                Permission[permission];
+              })
+            : [],
         });
-        if (body.actionUuid) {
-          this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
-        }
+      }
+      if (body.actionUuid) {
+        this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
       }
     } catch (exception) {
       throw exception;

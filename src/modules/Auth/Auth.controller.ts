@@ -11,7 +11,7 @@ import { User } from '../../entities/User.entity';
 import { AuthService } from './Auth.service';
 import { v4 } from 'uuid';
 import Authorization from '../../decorators/Authorization.decorator';
-import AuthGuard from '../../guards/AuthGuard';
+import AuthGuard from '../../guards/AuthGuard.guard';
 import { JwtService } from './Jwt/Jwt.service';
 import { CredentialsDto } from '../../pipes/validation/CredentialsDto.dto';
 import { TokenPayload, TokenType } from './Jwt/Jwt.interface';

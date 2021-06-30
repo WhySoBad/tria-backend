@@ -3,13 +3,25 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
   Post,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import { Response } from 'express';
+import { diskStorage } from 'multer';
+import path from 'path';
+import { config } from '../../config';
 import Authorization from '../../decorators/Authorization.decorator';
+import Permissions from '../../decorators/Permission.decorator';
+import Roles from '../../decorators/Roles.decorator';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
@@ -18,21 +30,56 @@ import { ChatMember } from '../../entities/ChatMember.entity';
 import { MemberLog } from '../../entities/MemberLog.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
-import AuthGuard from '../../guards/AuthGuard';
+import AuthGuard from '../../guards/AuthGuard.guard';
 import { BanMemberDto } from '../../pipes/validation/BanMemberDto.dto';
 import { GroupChatDto } from '../../pipes/validation/GroupChatDto.dto';
 import { GroupTagDto } from '../../pipes/validation/GroupTagDto.dto';
 import { KickMemberDto } from '../../pipes/validation/KickMemberDto.dto';
 import { PrivateChatDto } from '../../pipes/validation/PrivateChatDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
+import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { Permission, ChatPreview, GroupRole, ChatType } from './Chat.interface';
 import { ChatService } from './Chat.service';
 
+const uploadConfig: MulterOptions = {
+  fileFilter: (req: any, file: any, callback: any) => {
+    let rejected: boolean = false;
+    const contentLength: number = parseInt(req.headers['content-length'] || '');
+    if (contentLength > config.avatarSize) {
+      callback(new BadRequestException(`Maximum File Size Is ${config.avatarSize} Bytes`), false);
+      rejected = true;
+    }
+    if (!file.originalname.endsWith(config.avatarType)) {
+      callback(new BadRequestException('File Has To Be Of Type JPEG'), false);
+      rejected = true;
+    }
+    if (!rejected) callback(null, true);
+  },
+  storage: diskStorage({
+    destination: './data/avatar/group',
+    filename: (req, file, callback) => {
+      const payload: TokenPayload | undefined = JwtService.DecodeToken(
+        req.headers.authorization || ''
+      );
+      if (!payload) callback(new BadRequestException('Invalid Token'), '');
+      //this should never happen because the AuthGuard gets executed before the interceptor but safety first
+      else {
+        const filename: string = req.params.uuid;
+        const extension: string = path.parse(file.originalname).ext;
+        callback(null, `${filename}${extension}`);
+      }
+    },
+  }),
+  limits: {
+    fileSize: config.avatarSize,
+  },
+};
+
 /**
- * Chats controller to create, modiy, handle and delete chats
+ * Chat controller to create, modiy, handle and delete chats
  */
 
-@Controller('chats')
+@Controller('chat')
 export class ChatController {
   constructor(private chatService: ChatService) {}
 
@@ -129,7 +176,7 @@ export class ChatController {
    */
 
   @Get(':uuid/leave')
-  @UseGuards(AuthGuard)
+  @Roles(GroupRole.MEMBER)
   async leave(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string
@@ -177,7 +224,7 @@ export class ChatController {
    */
 
   @Post(':uuid/admin/ban')
-  @UseGuards(AuthGuard)
+  @Permissions(Permission.BAN)
   async ban(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
@@ -203,7 +250,7 @@ export class ChatController {
    */
 
   @Post(':uuid/admin/unban')
-  @UseGuards(AuthGuard)
+  @Permissions(Permission.UNBAN)
   async unban(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
@@ -229,7 +276,7 @@ export class ChatController {
    */
 
   @Post(':uuid/admin/kick')
-  @UseGuards(AuthGuard)
+  @Permissions(Permission.KICK)
   async kick(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
@@ -255,7 +302,8 @@ export class ChatController {
   @Get(':uuid/preview')
   async getPreview(@Param('uuid', new ParseUUIDPipe()) uuid: string): Promise<ChatPreview> {
     try {
-      const chat: Chat = await this.chatService.handleGet(uuid);
+      const chat: Chat | undefined = await this.chatService.getChat(uuid);
+      if (!chat) throw new NotFoundException('Chat Not Found');
       if (chat.type === ChatType.PRIVATE_GROUP) {
         throw new BadRequestException("Can't Get Preview Of Private Group");
       }
@@ -288,7 +336,7 @@ export class ChatController {
    */
 
   @Get(':uuid/messages/:timestamp/:amount')
-  @UseGuards(AuthGuard)
+  @Roles(GroupRole.MEMBER)
   async getMessages(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
@@ -297,13 +345,8 @@ export class ChatController {
   ): Promise<any> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
-      if (!chat.members.map(({ userUuid }) => userUuid).includes(payload.user)) {
-        throw new BadRequestException('User Has To Be Member Of Chat');
-      }
       const messages: Array<any> = chat.messages
-        .filter((message: Message) => {
-          return message.createdAt.getTime() < timestamp;
-        })
+        .filter((message: Message) => message.createdAt.getTime() < timestamp)
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .map((message: Message) => {
           return {
@@ -329,6 +372,30 @@ export class ChatController {
   }
 
   /**
+   * Route to update the last read timestamp of a member
+   *
+   * @param payload payload of user jwt
+   *
+   * @param uuid uuid of chat
+   *
+   * @param timestamp new timestamp
+   */
+
+  @Get(':uuid/messages/read/:timestamp')
+  @Roles(GroupRole.MEMBER)
+  async readMessage(
+    @Authorization() payload: TokenPayload,
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Param('timestamp', new ParseIntPipe()) timestamp: number
+  ): Promise<any> {
+    try {
+      await this.chatService.handleMessageRead(uuid, timestamp, payload);
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
    * Route to get a specific chat
    *
    * @param payload payload of user jwt
@@ -338,19 +405,14 @@ export class ChatController {
    * @returns Promise<any>
    */
   @Get(':uuid')
-  @UseGuards(AuthGuard)
+  @Roles(GroupRole.MEMBER)
   async get(
     @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string
   ): Promise<any> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
-      if (!chat.members.map(({ userUuid }) => userUuid).includes(payload.user)) {
-        throw new BadRequestException('User Has To Be Member Of Chat');
-      }
-
       const messages = await this.getMessages(payload, uuid, new Date().getTime(), 25);
-
       const admins: Array<ChatAdmin> = chat.admins;
       return {
         uuid: chat.uuid,
@@ -411,6 +473,81 @@ export class ChatController {
           };
         }),
       };
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Route to get the avatar of a group by its uuid
+   *
+   * @param uuid uuid of the group
+   *
+   * @param response response of the request
+   *
+   * @returns Promise<any>
+   */
+
+  @Get(':uuid/avatar')
+  async getAvatar(
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Res() response: Response
+  ): Promise<any> {
+    try {
+      await this.chatService.handleAvatarGet(uuid);
+      response.sendFile(`${uuid}${config.avatarType}`, { root: './data/avatar/group' }, (err) => {
+        if (err) new NotFoundException('Avatar Not Found');
+      });
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Route to upload a new avatar picture
+   *
+   * @param file uploaded file
+   *
+   * @param payload payload of user jwt
+   *
+   * @param uuid uuid of the group
+   *
+   * @returns Promise<void>
+   */
+
+  @Post(':uuid/avatar/upload')
+  @Permissions(Permission.CHAT_EDIT)
+  @UseInterceptors(FileInterceptor('avatar', uploadConfig))
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Authorization() payload: TokenPayload,
+    @Param('uuid', new ParseUUIDPipe()) uuid: string
+  ): Promise<void> {
+    try {
+      await this.chatService.handleAvatarUpload(file, payload, uuid);
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Route to delete an avatar picture
+   *
+   * @param uuid uuid of the group
+   *
+   * @param payload
+   *
+   * @returns Promise<void>
+   */
+
+  @Get(':uuid/avatar/delete')
+  @Permissions(Permission.CHAT_EDIT)
+  async deleteAvatar(
+    @Param('uuid', new ParseUUIDPipe()) uuid: string,
+    @Authorization() payload: TokenPayload
+  ): Promise<void> {
+    try {
+      await this.chatService.handleAvatarDelete(payload, uuid);
     } catch (exception) {
       throw exception;
     }

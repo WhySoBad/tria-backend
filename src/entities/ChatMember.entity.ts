@@ -20,6 +20,8 @@ export class ChatMember {
 
   @CreateDateColumn({ type: 'timestamp' }) joinedAt: Date;
 
+  @Column({ type: 'timestamp' }) lastRead: Date;
+
   @Column({ type: 'int', default: GroupRole.MEMBER }) role: GroupRole;
 
   @ManyToOne(() => User, (user) => user.chats, { onDelete: 'CASCADE' })

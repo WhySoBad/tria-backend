@@ -24,8 +24,6 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { unlinkSync } from 'fs';
 import { access } from 'fs/promises';
-import { UserTagDto } from '../../pipes/validation/UserTagDto.dto';
-import { UserMailDto } from '../../pipes/validation/UserMailDto.dto';
 
 @Injectable()
 export class UserService {
@@ -349,8 +347,16 @@ export class UserService {
     else return user;
   }
 
+  /**
+   * Function to validify that an avatar exists
+   *
+   * @param uuid uuid of the avatar
+   *
+   * @returns Promise<void>
+   */
+
   async handleAvatarGet(uuid: string): Promise<void> {
-    await access(`./data/avatar/user/${uuid}${config.avatarType}`).catch((err) => {
+    await access(`./data/avatar/user/${uuid}${config.avatarType}`).catch(() => {
       throw new NotFoundException('Avatar Not Found');
     });
   }

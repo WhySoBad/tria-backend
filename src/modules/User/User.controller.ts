@@ -16,7 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import Authorization from '../../decorators/Authorization.decorator';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
-import AuthGuard from '../../guards/AuthGuard';
+import AuthGuard from '../../guards/AuthGuard.guard';
 import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
 import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
 import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
@@ -329,6 +329,8 @@ export class UserController {
    *
    * @param uuid uuid of the user
    *
+   * @param response response of the request
+   *
    * @returns Promise<any>
    */
 
@@ -351,6 +353,8 @@ export class UserController {
    * Route to upload a new avatar picture
    *
    * @param file uploaded file
+   *
+   * @param payload payload of user jwt
    *
    * @returns Promise<void>
    */
@@ -379,7 +383,7 @@ export class UserController {
 
   @Get('avatar/delete')
   @UseGuards(AuthGuard)
-  async handleAvatarDelete(@Authorization() payload: TokenPayload) {
+  async deleteAvatar(@Authorization() payload: TokenPayload): Promise<void> {
     try {
       await this.userService.handleAvatarDelete(payload);
     } catch (exception) {

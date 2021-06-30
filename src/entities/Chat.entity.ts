@@ -20,11 +20,13 @@ export class Chat {
 
   @Column('int') type: ChatType;
 
-  @Column({ type: 'text', nullable: true }) name: string;
+  @Column({ type: 'text', nullable: true }) name: string | null;
 
-  @Column({ type: 'text', nullable: true }) tag: string;
+  @Column({ type: 'text', nullable: true }) tag: string | null;
 
-  @Column({ type: 'text', nullable: true }) description: string;
+  @Column({ type: 'text', nullable: true }) description: string | null;
+
+  @Column({ type: 'text', nullable: true }) avatar: string | null;
 
   @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 

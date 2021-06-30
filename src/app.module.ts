@@ -9,6 +9,7 @@ import { ChatModule } from './modules/Chat/Chat.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { SearchModule } from './modules/Search/Search.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
     ChatModule,
     UserModule,
     AuthModule,
+    SearchModule,
   ],
   exports: [],
   controllers: [AppController],
