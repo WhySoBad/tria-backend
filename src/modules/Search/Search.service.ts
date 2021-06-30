@@ -5,7 +5,7 @@ import { Chat } from '../../entities/Chat.entity';
 import { User } from '../../entities/User.entity';
 import { SearchDto } from '../../pipes/validation/SearchDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import { ChatPreview } from '../Chat/Chat.interface';
+import { ChatPreview, ChatType } from '../Chat/Chat.interface';
 import { UserPreview } from '../User/User.interface';
 import { WeightedEntry } from './Search.interface';
 
@@ -95,7 +95,7 @@ export class SearchService {
       const { uuid, type, name, tag, description, members } = chat;
       const weighted: WeightedEntry<ChatPreview> = {
         uuid: uuid,
-        type: type,
+        type: (ChatType as any)[type],
         name: name,
         tag: tag,
         description: description,
