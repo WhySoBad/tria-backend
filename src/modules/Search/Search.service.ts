@@ -128,17 +128,26 @@ export class SearchService {
 
       weight += (!isNaN(online) && online * 2) || 0; //percentage of online users gives 2 points
 
-      if (name.toLowerCase().startsWith(text)) weight += 10;
+      const nameStarts: boolean = name.toLowerCase().startsWith(text);
       const replacedName: number = name.toLowerCase().replace(text, '').length;
-      weight += replacedName !== text.length ? (text.length / replacedName) * 40 : 0; //matching name gives 40 weight
+      if (nameStarts) weight += 10;
+      if (replacedName === text.length && nameStarts) weight += 40;
+      else if (replacedName === text.length) weight += 0;
+      else weight += (text.length / replacedName) * 40; //matching name gives 40 weight
 
-      if (tag.toLowerCase().startsWith(text)) weight += 10;
+      const tagStarts: boolean = tag.toLowerCase().startsWith(text);
       const replacedTag: number = tag.toLowerCase().replace(text, '').length;
-      weight += replacedTag !== text.length ? (text.length / replacedTag) * 25 : 0; //matching tag gives 25 weight
+      if (tagStarts) weight += 10;
+      if (replacedTag === text.length && tagStarts) weight += 25;
+      else if (replacedTag === text.length) weight += 0;
+      else weight += (text.length / replacedTag) * 25; //matching tag gives 25 weight
 
-      if (uuid.toLowerCase().startsWith(text)) weight += 10;
+      const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
       const replacedUuid: number = uuid.toLowerCase().replace(text, '').length;
-      weight += replacedUuid !== text.length ? (text.length / replacedUuid) * 15 : 0; //matching uuid gives 15 weight
+      if (uuidStarts) weight += 10;
+      if (replacedUuid === text.length && uuidStarts) weight += 15;
+      else if (replacedUuid === text.length) weight += 0;
+      else weight += (text.length / replacedUuid) * 15; //matching uuid gives 15 weight
 
       weighted.weight = weight;
       return weighted;
