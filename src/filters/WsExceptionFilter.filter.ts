@@ -8,10 +8,9 @@ class WsExceptionFilter extends BaseWsExceptionFilter {
   private logger: Logger = new Logger('WsExceptionFilter');
 
   catch(exception: any, host: ArgumentsHost) {
-    console.log(exception);
     const socket: Socket = host.switchToHttp().getRequest();
     const data: any = host.switchToWs().getData();
-    const statusCode: number = exception?.getStatus() || 500;
+    const statusCode: number = exception instanceof HttpException ? exception.getStatus() : 500;
     const response: any = exception?.getResponse() || {};
     const message: string | Array<string> = response.message || 'Internal Server Error';
     const final: string = capitalizeMessage(Array.isArray(message) ? message.join(', ') : message);
