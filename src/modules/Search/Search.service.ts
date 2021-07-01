@@ -37,6 +37,14 @@ export class SearchService {
     const checkChat: boolean = !!body.checkChat || !checkUser;
     const text: string = body.text.toLowerCase();
 
+    const getQuery: (
+      builder: SelectQueryBuilder<any>,
+      param: string
+    ) => Promise<Array<any>> = async (builder: SelectQueryBuilder<any>, param: string) => {
+      const query: string = `LOWER(${param}) like '%${text}%'`;
+      return await builder.orWhere(query).getMany();
+    };
+
     const getUser = async (): Promise<Array<User>> => {
       if (!checkUser) return [];
       const builder: SelectQueryBuilder<User> = this.userRepository
@@ -47,11 +55,11 @@ export class SearchService {
         .leftJoinAndSelect('chat.banned', 'banned')
         .leftJoinAndSelect('banned.user', 'banned_user');
       const user: Array<User> = [
-        ...(checkUuid ? await builder.orWhere(`LOWER(user.uuid) like '%${text}%'`).getMany() : []),
-        ...(checkName ? await builder.orWhere(`LOWER(user.name) like '%${text}%'`).getMany() : []),
-        ...(checkTag ? await builder.orWhere(`LOWER(user.tag) like '%${text}%'`).getMany() : []),
-      ];
-      return [...new Set(user)];
+        ...(checkUuid ? await getQuery(builder, 'user.uuid') : []),
+        ...(checkName ? await getQuery(builder, 'user.name') : []),
+        ...(checkTag ? await getQuery(builder, 'user.tag') : []),
+      ].filter(({ uuid }) => uuid !== payload.user);
+      return user.filter((a, i) => user.findIndex((b) => a.uuid === b.uuid) === i);
     };
 
     const getChats = async (): Promise<Array<Chat>> => {
@@ -65,18 +73,12 @@ export class SearchService {
         .leftJoinAndSelect('banned.user', 'banned_user')
         .where('chat.type = 0');
       const chats: Array<Chat> = [
-        ...(checkUuid ? await builder.andWhere(`LOWER(chat.uuid) like '%${text}%'`).getMany() : []),
-        ...(checkName ? await builder.andWhere(`LOWER(chat.name) like '%${text}%'`).getMany() : []),
-        ...(checkTag ? await builder.andWhere(`LOWER(chat.tag) like '%${text}%'`).getMany() : []),
-      ];
+        ...(checkUuid ? await getQuery(builder, 'chat.uuid') : []),
+        ...(checkName ? await getQuery(builder, 'chat.name') : []),
+        ...(checkTag ? await getQuery(builder, 'chat.tag') : []),
+      ].filter((chat: Chat) => !chat.banned.find(({ userUuid }) => payload.user === userUuid));
 
-      return [
-        ...new Set(
-          chats.filter(
-            (chat: Chat) => !chat.banned.find(({ userUuid }) => payload.user === userUuid)
-          )
-        ),
-      ];
+      return chats.filter((a, i) => chats.findIndex((b) => a.uuid === b.uuid) === i);
     };
 
     const user: User | undefined = await this.userRepository
@@ -93,37 +95,24 @@ export class SearchService {
 
     const chats: Array<WeightedEntry<ChatPreview>> = (await getChats()).map((chat: Chat) => {
       const { uuid, type, name, tag, description, members } = chat;
+      let weight: number = 0;
       const weighted: WeightedEntry<ChatPreview> = {
         uuid: uuid,
         type: (ChatType as any)[type],
         name: name,
         tag: tag,
         description: description,
-        weight: 0,
-        startsWith: false,
-        characters: 0,
         size: members.length,
         online: members.filter(({ user: { online } }) => online).length,
+        weight: 0,
       };
 
-      if (checkUuid && user.uuid.toLowerCase().startsWith(text)) {
-        weighted.startsWith = true;
-        weighted.characters = (text.length / user.uuid.length) * 100;
-      }
-      if (checkName && user.name.toLowerCase().startsWith(text)) {
-        weighted.startsWith = true;
-        const percentage: number = (text.length / user.name.length) * 100;
-        percentage > weighted.characters && (weighted.characters = percentage);
-      }
-      if (checkTag && user.tag.toLowerCase().startsWith(text)) {
-        weighted.startsWith = true;
-        const percentage: number = (text.length / user.tag.length) * 100;
-        percentage > weighted.characters && (weighted.characters = percentage);
-      }
+      if (!name || !tag) return weighted;
 
       //amount of users the user is already in a chat with
       //one user can count multiple times when they are in different chats together
-      const sameContacts: number = chat.members
+
+      const contacts: number = chat.members
         .map(({ userUuid }) => userUuid.toLowerCase())
         .filter((uuid) => {
           let found: number = 0;
@@ -133,45 +122,60 @@ export class SearchService {
           return found;
         }).length;
 
-      //percentage of current online people in the chat to make sure that active chats get more promoted
-      const percentageOnline: number = (weighted.online / weighted.size) * 100;
-      weighted.weight = percentageOnline + sameContacts;
+      weight += contacts > 20 ? 8 : contacts * 0.4;
+
+      const online: number = weighted.online / weighted.size;
+
+      weight += (!isNaN(online) && online * 2) || 0; //percentage of online users gives 2 points
+
+      if (name.toLowerCase().startsWith(text)) weight += 10;
+      const replacedName: number = name.toLowerCase().replace(text, '').length;
+      weight += replacedName !== text.length ? (text.length / replacedName) * 40 : 0; //matching name gives 40 weight
+
+      if (tag.toLowerCase().startsWith(text)) weight += 10;
+      const replacedTag: number = tag.toLowerCase().replace(text, '').length;
+      weight += replacedTag !== text.length ? (text.length / replacedTag) * 25 : 0; //matching tag gives 25 weight
+
+      if (uuid.toLowerCase().startsWith(text)) weight += 10;
+      const replacedUuid: number = uuid.toLowerCase().replace(text, '').length;
+      weight += replacedUuid !== text.length ? (text.length / replacedUuid) * 15 : 0; //matching uuid gives 15 weight
+
+      weighted.weight = weight;
       return weighted;
     });
 
     const users: Array<WeightedEntry<UserPreview>> = (await getUser()).map((user: User) => {
       const { uuid, name, tag, description } = user;
+      let weight: number = 0;
       const weighted: WeightedEntry<UserPreview> = {
         uuid: uuid,
         name: name,
         tag: tag,
         description: description,
         weight: 0,
-        startsWith: false,
-        characters: 0,
       };
-      if (checkUuid && user.uuid.toLowerCase().startsWith(text)) {
-        weighted.startsWith = true;
-        weighted.characters = (text.length / user.uuid.length) * 100;
-      }
-      if (checkName && user.name.toLowerCase().startsWith(text)) {
-        weighted.startsWith = true;
-        const percentage: number = (text.length / user.name.length) * 100;
-        percentage > weighted.characters && (weighted.characters = percentage);
-      }
-      if (checkTag && user.tag.toLowerCase().startsWith(text)) {
-        weighted.startsWith = true;
-        const percentage: number = (text.length / user.tag.length) * 100;
-        percentage > weighted.characters && (weighted.characters = percentage);
-      }
 
-      //amount of shared chats with the user
-      const sameChats: number = user.chats
+      //amount of shared chats
+      const chats: number = user.chats
         .filter(({ chat }) => !chat.banned.find(({ userUuid }) => payload.user === userUuid))
         .map(({ chatUuid }) => chatUuid.toLowerCase())
         .filter((uuid) => mappedChats.includes(uuid)).length;
 
-      weighted.weight = sameChats + weighted.characters;
+      weight += chats;
+
+      if (name.toLowerCase().startsWith(text)) weight += 10;
+      const replacedName: number = name.toLowerCase().replace(text, '').length;
+      weight += replacedName !== text.length ? (text.length / replacedName) * 40 : 0; //matching name gives 40 weight
+
+      if (tag.toLowerCase().startsWith(text)) weight += 10;
+      const replacedTag: number = tag.toLowerCase().replace(text, '').length;
+      weight += replacedTag !== text.length ? (text.length / replacedTag) * 25 : 0; //matching tag gives 25 weight
+
+      if (uuid.toLowerCase().startsWith(text)) weight += 10;
+      const replacedUuid: number = uuid.toLowerCase().replace(text, '').length;
+      weight += replacedUuid !== text.length ? (text.length / replacedUuid) * 15 : 0; //matching uuid gives 15 weight
+
+      weighted.weight = weight;
       return weighted;
     });
 
@@ -179,18 +183,12 @@ export class SearchService {
       ...users,
       ...chats,
     ].sort((a, b) => {
-      if (a.startsWith && !b.startsWith) return -1;
-      else if (b.startsWith && !a.startsWith) return 1;
-      if (!(a.characters === 100 && b.characters === 100)) {
-        if (a.characters === 100) return -1;
-        else if (b.characters === 100) return 1;
-      }
-      return a.weight - b.weight;
+      return b.weight - a.weight;
     });
 
     return [
       ...mixed.map((value) => {
-        const { weight, characters, startsWith, ...rest } = value;
+        const { weight, ...rest } = value;
         return rest;
       }),
     ];
