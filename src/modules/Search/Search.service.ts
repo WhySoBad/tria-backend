@@ -42,7 +42,7 @@ export class SearchService {
       param: string
     ) => Promise<Array<any>> = async (builder: SelectQueryBuilder<any>, param: string) => {
       const query: string = `LOWER(${param}) like '%${text}%'`;
-      return await builder.orWhere(query).getMany();
+      return await builder.andWhere(query).getMany();
     };
 
     const getUser = async (): Promise<Array<User>> => {
@@ -71,12 +71,14 @@ export class SearchService {
         .leftJoinAndSelect('member.user', 'user')
         .leftJoinAndSelect('chat.banned', 'banned')
         .leftJoinAndSelect('banned.user', 'banned_user')
-        .where('chat.type = 0');
+        .andWhere('chat.type = 0');
       const chats: Array<Chat> = [
         ...(checkUuid ? await getQuery(builder, 'chat.uuid') : []),
         ...(checkName ? await getQuery(builder, 'chat.name') : []),
         ...(checkTag ? await getQuery(builder, 'chat.tag') : []),
       ].filter((chat: Chat) => !chat.banned.find(({ userUuid }) => payload.user === userUuid));
+
+      console.log(chats);
 
       return chats.filter((a, i) => chats.findIndex((b) => a.uuid === b.uuid) === i);
     };
