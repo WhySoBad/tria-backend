@@ -78,8 +78,6 @@ export class SearchService {
         ...(checkTag ? await getQuery(builder, 'chat.tag') : []),
       ].filter((chat: Chat) => !chat.banned.find(({ userUuid }) => payload.user === userUuid));
 
-      console.log(chats);
-
       return chats.filter((a, i) => chats.findIndex((b) => a.uuid === b.uuid) === i);
     };
 
@@ -130,26 +128,28 @@ export class SearchService {
 
       weight += (!isNaN(online) && online * 2) || 0; //percentage of online users gives 2 points
 
-      const nameStarts: boolean = name.toLowerCase().startsWith(text);
-      const replacedName: number = name.toLowerCase().replace(text, '').length;
-      if (nameStarts) weight += 10;
-      if (replacedName === text.length && nameStarts) weight += 40;
-      else if (replacedName === text.length) weight += 0;
-      else weight += (text.length / replacedName) * 40; //matching name gives 40 weight
+      if (text.length !== 0) {
+        const nameStarts: boolean = name.toLowerCase().startsWith(text);
+        const replacedName: number = text.length - name.toLowerCase().replace(text, '').length;
+        if (nameStarts) weight += 10;
+        if (replacedName === 0 && nameStarts) weight += 40;
+        else if (replacedName === 0) weight += 0;
+        else weight += (replacedName / text.length) * 40; //matching name gives 40 weight
 
-      const tagStarts: boolean = tag.toLowerCase().startsWith(text);
-      const replacedTag: number = tag.toLowerCase().replace(text, '').length;
-      if (tagStarts) weight += 10;
-      if (replacedTag === text.length && tagStarts) weight += 25;
-      else if (replacedTag === text.length) weight += 0;
-      else weight += (text.length / replacedTag) * 25; //matching tag gives 25 weight
+        const tagStarts: boolean = tag.toLowerCase().startsWith(text);
+        const replacedTag: number = text.length - tag.toLowerCase().replace(text, '').length;
+        if (tagStarts) weight += 10;
+        if (replacedTag === 0 && tagStarts) weight += 25;
+        else if (replacedTag === 0) weight += 0;
+        else weight += (replacedTag / text.length) * 25; //matching tag gives 25 weight
 
-      const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
-      const replacedUuid: number = uuid.toLowerCase().replace(text, '').length;
-      if (uuidStarts) weight += 10;
-      if (replacedUuid === text.length && uuidStarts) weight += 15;
-      else if (replacedUuid === text.length) weight += 0;
-      else weight += (text.length / replacedUuid) * 15; //matching uuid gives 15 weight
+        const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
+        const replacedUuid: number = text.length - uuid.toLowerCase().replace(text, '').length;
+        if (uuidStarts) weight += 10;
+        if (replacedUuid === 0 && uuidStarts) weight += 15;
+        else if (replacedUuid === 0) weight += 0;
+        else weight += (replacedUuid / text.length) * 15; //matching uuid gives 15 weight
+      }
 
       weighted.weight = weight;
       return weighted;
@@ -174,26 +174,28 @@ export class SearchService {
 
       weight += chats;
 
-      const nameStarts: boolean = name.toLowerCase().startsWith(text);
-      const replacedName: number = name.toLowerCase().replace(text, '').length;
-      if (nameStarts) weight += 10;
-      if (replacedName === text.length && nameStarts) weight += 40;
-      else if (replacedName === text.length) weight += 0;
-      else weight += (text.length / replacedName) * 40; //matching name gives 40 weight
+      if (text.length !== 0) {
+        const nameStarts: boolean = name.toLowerCase().startsWith(text);
+        const replacedName: number = text.length - name.toLowerCase().replace(text, '').length;
+        if (nameStarts) weight += 10;
+        if (replacedName === 0 && nameStarts) weight += 40;
+        else if (replacedName === 0) weight += 0;
+        else weight += (replacedName / text.length) * 40; //matching name gives 40 weight
 
-      const tagStarts: boolean = tag.toLowerCase().startsWith(text);
-      const replacedTag: number = tag.toLowerCase().replace(text, '').length;
-      if (tagStarts) weight += 10;
-      if (replacedTag === text.length && tagStarts) weight += 25;
-      else if (replacedTag === text.length) weight += 0;
-      else weight += (text.length / replacedTag) * 25; //matching tag gives 25 weight
+        const tagStarts: boolean = tag.toLowerCase().startsWith(text);
+        const replacedTag: number = text.length - tag.toLowerCase().replace(text, '').length;
+        if (tagStarts) weight += 10;
+        if (replacedTag === 0 && tagStarts) weight += 25;
+        else if (replacedTag === 0) weight += 0;
+        else weight += (replacedTag / text.length) * 25; //matching tag gives 25 weight
 
-      const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
-      const replacedUuid: number = uuid.toLowerCase().replace(text, '').length;
-      if (uuidStarts) weight += 10;
-      if (replacedUuid === text.length && uuidStarts) weight += 15;
-      else if (replacedUuid === text.length) weight += 0;
-      else weight += (text.length / replacedUuid) * 15; //matching uuid gives 15 weight
+        const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
+        const replacedUuid: number = text.length - uuid.toLowerCase().replace(text, '').length;
+        if (uuidStarts) weight += 10;
+        if (replacedUuid === 0 && uuidStarts) weight += 15;
+        else if (replacedUuid === 0) weight += 0;
+        else weight += (replacedUuid / text.length) * 15; //matching uuid gives 15 weight
+      }
 
       weighted.weight = weight;
       return weighted;
