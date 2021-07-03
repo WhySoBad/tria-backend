@@ -37,6 +37,16 @@ export class SearchService {
     const checkChat: boolean = !!body.checkChat || !checkUser;
     const text: string = body.text.toLowerCase();
 
+    /**
+     * Function to generate the SQL query for a given param
+     *
+     * @param builder current query builder
+     *
+     * @param param parameter
+     *
+     * @returns Promise<Array<any>>
+     */
+
     const getQuery: (
       builder: SelectQueryBuilder<any>,
       param: string
@@ -44,6 +54,14 @@ export class SearchService {
       const query: string = `LOWER(${param}) like '%${text}%'`;
       return await builder.andWhere(query).getMany();
     };
+
+    /**
+     * Function to get the user which match the current
+     *
+     * search options
+     *
+     * @returns Promise<Array<User>>
+     */
 
     const getUser = async (): Promise<Array<User>> => {
       if (!checkUser) return [];
@@ -62,6 +80,14 @@ export class SearchService {
       return user.filter((a, i) => user.findIndex((b) => a.uuid === b.uuid) === i);
     };
 
+    /**
+     * Function to get the chats which match the
+     *
+     * current search options
+     *
+     * @returns Promise<Array<Chat>>
+     */
+
     const getChats = async (): Promise<Array<Chat>> => {
       if (!checkChat) return [];
 
@@ -79,6 +105,39 @@ export class SearchService {
       ].filter((chat: Chat) => !chat.banned.find(({ userUuid }) => payload.user === userUuid));
 
       return chats.filter((a, i) => chats.findIndex((b) => a.uuid === b.uuid) === i);
+    };
+
+    /**
+     * Function to calculate the weight
+     *
+     * @param name name of the result
+     *
+     * @param tag tag of the result
+     *
+     * @param uuid uuid of the result
+     *
+     * @returns number
+     */
+
+    const getWeight = (name: string, tag: string, uuid: string): number => {
+      let weight: number = 0;
+      if (text.length !== 0) {
+        const nameStarts: boolean = name.toLowerCase().startsWith(text);
+        const replacedName: number = text.length - name.toLowerCase().replace(text, '').length;
+        if (nameStarts) weight += 10;
+        weight += (replacedName / text.length) * 40; //matching name gives 40 weight
+
+        const tagStarts: boolean = tag.toLowerCase().startsWith(text);
+        const replacedTag: number = text.length - tag.toLowerCase().replace(text, '').length;
+        if (tagStarts) weight += 10;
+        weight += (replacedTag / text.length) * 25; //matching tag gives 25 weight
+
+        const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
+        const replacedUuid: number = text.length - uuid.toLowerCase().replace(text, '').length;
+        if (uuidStarts) weight += 10;
+        weight += (replacedUuid / text.length) * 15; //matching uuid gives 15 weight
+      }
+      return weight;
     };
 
     const user: User | undefined = await this.userRepository
@@ -127,30 +186,7 @@ export class SearchService {
       const online: number = weighted.online / weighted.size;
 
       weight += (!isNaN(online) && online * 2) || 0; //percentage of online users gives 2 points
-
-      if (text.length !== 0) {
-        const nameStarts: boolean = name.toLowerCase().startsWith(text);
-        const replacedName: number = text.length - name.toLowerCase().replace(text, '').length;
-        if (nameStarts) weight += 10;
-        if (replacedName === 0 && nameStarts) weight += 40;
-        else if (replacedName === 0) weight += 0;
-        else weight += (replacedName / text.length) * 40; //matching name gives 40 weight
-
-        const tagStarts: boolean = tag.toLowerCase().startsWith(text);
-        const replacedTag: number = text.length - tag.toLowerCase().replace(text, '').length;
-        if (tagStarts) weight += 10;
-        if (replacedTag === 0 && tagStarts) weight += 25;
-        else if (replacedTag === 0) weight += 0;
-        else weight += (replacedTag / text.length) * 25; //matching tag gives 25 weight
-
-        const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
-        const replacedUuid: number = text.length - uuid.toLowerCase().replace(text, '').length;
-        if (uuidStarts) weight += 10;
-        if (replacedUuid === 0 && uuidStarts) weight += 15;
-        else if (replacedUuid === 0) weight += 0;
-        else weight += (replacedUuid / text.length) * 15; //matching uuid gives 15 weight
-      }
-
+      weight += getWeight(name, tag, uuid);
       weighted.weight = weight;
       return weighted;
     });
@@ -173,30 +209,7 @@ export class SearchService {
         .filter((uuid) => mappedChats.includes(uuid)).length;
 
       weight += chats;
-
-      if (text.length !== 0) {
-        const nameStarts: boolean = name.toLowerCase().startsWith(text);
-        const replacedName: number = text.length - name.toLowerCase().replace(text, '').length;
-        if (nameStarts) weight += 10;
-        if (replacedName === 0 && nameStarts) weight += 40;
-        else if (replacedName === 0) weight += 0;
-        else weight += (replacedName / text.length) * 40; //matching name gives 40 weight
-
-        const tagStarts: boolean = tag.toLowerCase().startsWith(text);
-        const replacedTag: number = text.length - tag.toLowerCase().replace(text, '').length;
-        if (tagStarts) weight += 10;
-        if (replacedTag === 0 && tagStarts) weight += 25;
-        else if (replacedTag === 0) weight += 0;
-        else weight += (replacedTag / text.length) * 25; //matching tag gives 25 weight
-
-        const uuidStarts: boolean = uuid.toLowerCase().startsWith(text);
-        const replacedUuid: number = text.length - uuid.toLowerCase().replace(text, '').length;
-        if (uuidStarts) weight += 10;
-        if (replacedUuid === 0 && uuidStarts) weight += 15;
-        else if (replacedUuid === 0) weight += 0;
-        else weight += (replacedUuid / text.length) * 15; //matching uuid gives 15 weight
-      }
-
+      weight += getWeight(name, tag, uuid);
       weighted.weight = weight;
       return weighted;
     });
