@@ -361,9 +361,22 @@ export class ChatController {
           };
         });
 
+      const next: Message | undefined = messages.slice(amount, amount + 1)[0];
+
+      const log: Array<MemberLog> = chat.memberLog.filter((log: MemberLog) => {
+        const beforeNext: boolean = !next || log.timestamp.getTime() > next.createdAt.getTime();
+        return log.timestamp.getTime() < timestamp && beforeNext;
+      });
+
       const last: boolean = messages.length <= amount;
       return {
         messages: last ? messages : messages.slice(0, amount),
+        log: log.map((memberLog: MemberLog) => ({
+          user: memberLog.userUuid,
+          chat: memberLog.chatUuid,
+          timestamp: memberLog.timestamp,
+          joined: memberLog.joined,
+        })),
         last: last,
       };
     } catch (exception) {
@@ -465,14 +478,7 @@ export class ChatController {
             },
           };
         }),
-        memberLog: chat.memberLog.map((memberLog: MemberLog) => {
-          return {
-            user: memberLog.userUuid,
-            chat: memberLog.chatUuid,
-            timestamp: memberLog.timestamp,
-            joined: memberLog.joined,
-          };
-        }),
+        memberLog: messages.log,
       };
     } catch (exception) {
       throw exception;
