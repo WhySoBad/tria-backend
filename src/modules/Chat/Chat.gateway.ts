@@ -414,6 +414,7 @@ export class ChatGateway {
     this.server.to(chat.uuid).emit(ChatEvent.PRIVATE_CREATE, {
       uuid: chat.uuid,
       type: ChatType[chat.type],
+      createdAt: chat.createdAt,
       messages: chat.messages.map((message: Message) => {
         return {
           uuid: message.uuid,
@@ -476,6 +477,7 @@ export class ChatGateway {
       name: chat.name,
       tag: chat.tag,
       description: chat.description,
+      createdAt: chat.createdAt,
       memberLog: chat.memberLog.map((memberLog: MemberLog) => {
         return {
           user: memberLog.userUuid,
