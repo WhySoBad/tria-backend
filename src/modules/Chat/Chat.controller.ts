@@ -449,6 +449,7 @@ export class ChatController {
           return {
             joinedAt: member.joinedAt,
             role: GroupRole[member.role],
+            lastRead: member.lastRead,
             user: {
               uuid: user.uuid,
               createdAt: user.createdAt,
