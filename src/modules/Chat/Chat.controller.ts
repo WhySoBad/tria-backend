@@ -425,6 +425,9 @@ export class ChatController {
   ): Promise<any> {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
+      const user: ChatMember | undefined = chat.members.find(
+        ({ userUuid }) => userUuid === payload.user
+      );
       const messages = await this.getMessages(payload, uuid, new Date().getTime(), 25);
       const admins: Array<ChatAdmin> = chat.admins;
       return {
@@ -435,6 +438,7 @@ export class ChatController {
         avatar: chat.avatar,
         description: chat.description,
         createdAt: chat.createdAt,
+        lastRead: (user as any).lastRead,
         members: chat.members.map((member: ChatMember) => {
           const user: User = member.user;
           const chatAdmin: ChatAdmin | undefined = admins?.find((admin: ChatAdmin) => {
@@ -449,7 +453,6 @@ export class ChatController {
           return {
             joinedAt: member.joinedAt,
             role: GroupRole[member.role],
-            lastRead: member.lastRead,
             user: {
               uuid: user.uuid,
               createdAt: user.createdAt,
