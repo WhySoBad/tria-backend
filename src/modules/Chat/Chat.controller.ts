@@ -335,7 +335,7 @@ export class ChatController {
    * @returns Promise<any>
    */
 
-  @Get(':uuid/messages/:timestamp/:amount')
+  @Get(':uuid/messages/get/:timestamp/:amount')
   @Roles(GroupRole.MEMBER)
   async getMessages(
     @Authorization() payload: TokenPayload,
