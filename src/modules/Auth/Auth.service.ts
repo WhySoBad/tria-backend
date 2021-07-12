@@ -75,7 +75,7 @@ export class AuthService {
     if (banned) throw new UnauthorizedException('Token Is Banned');
     const blacklistToken: BlacklistToken = new BlacklistToken();
     blacklistToken.uuid = uuid;
-    blacklistToken.expires = new Date(exp * 1000).toISOString();
+    blacklistToken.expires = new Date(exp * 1000);
     await this.blacklistRepository.save(blacklistToken);
   }
 
@@ -136,7 +136,7 @@ export class AuthService {
     if (!user) throw new NotFoundException('User Not Found');
     if (update) {
       user.online = false;
-      user.lastSeen = new Date().toISOString();
+      user.lastSeen = new Date();
       await this.userRepository.save(user);
     }
     return user;

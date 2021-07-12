@@ -18,9 +18,9 @@ export class ChatMember {
 
   @PrimaryColumn({ type: 'uuid', name: 'chatUuid' }) chatUuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) joinedAt: string;
+  @Column({ type: 'timestamp', default: new Date() }) joinedAt: Date;
 
-  @Column({ type: 'timestamp' }) lastRead: string;
+  @Column({ type: 'timestamp' }) lastRead: Date;
 
   @Column({ type: 'int', default: GroupRole.MEMBER }) role: GroupRole;
 

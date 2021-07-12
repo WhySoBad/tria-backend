@@ -145,7 +145,7 @@ export class UserService {
     user.createdAt = pending.createdAt;
     user.avatar = user.uuid;
     user.online = false;
-    user.lastSeen = new Date().toISOString();
+    user.lastSeen = new Date();
 
     await this.pendingUserRepository.remove(pending);
     await this.userRepository.save(user);

@@ -4,12 +4,10 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeor
 export class PendingUser {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: string;
+  @Column({ type: 'timestamp', default: new Date() })
+  createdAt: Date;
 
-  @Column({ type: 'timestamp' }) expires: string = new Date(
-    new Date().getTime() + 604800000
-  ).toISOString();
+  @Column({ type: 'timestamp', default: new Date(new Date().getTime() + 604800000) }) expires: Date;
 
   @Column('text') mail: string;
 

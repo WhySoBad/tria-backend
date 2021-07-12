@@ -10,9 +10,9 @@ export class Message {
 
   @Column('uuid') userUuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) createdAt: string;
+  @Column({ type: 'timestamp', default: new Date() }) createdAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true }) editedAt: string;
+  @Column({ type: 'timestamp', nullable: true }) editedAt: Date;
 
   @Column({ type: 'int', default: 0 }) edited: number;
 

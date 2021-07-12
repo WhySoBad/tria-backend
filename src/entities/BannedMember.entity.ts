@@ -1,4 +1,12 @@
-import { CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 
@@ -9,7 +17,7 @@ export class BannedMember {
 
   @PrimaryColumn({ type: 'uuid', name: 'chatUuid' }) chatUuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) bannedAt: string;
+  @Column({ type: 'timestamp', default: new Date() }) bannedAt: Date;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userUuid' })
