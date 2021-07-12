@@ -6,11 +6,11 @@ import { User } from './User.entity';
 @Entity()
 @Index(['userUuid', 'chatUuid'], { unique: true })
 export class ChatAdmin {
-  @Column('uuid', { primary: true, unique: false }) userUuid: string;
+  @Column({ type: 'uuid', primary: true, unique: false }) userUuid: string;
 
-  @Column('uuid', { primary: true, unique: false }) chatUuid: string;
+  @Column({ type: 'uuid', primary: true, unique: false }) chatUuid: string;
 
-  @Column({ type: 'timestamp', default: new Date() }) promotedAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) promotedAt: Date;
 
   @OneToMany(() => AdminPermission, (adminPermission) => adminPermission.admins, {
     onDelete: 'CASCADE',

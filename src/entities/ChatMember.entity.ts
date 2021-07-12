@@ -18,7 +18,7 @@ export class ChatMember {
 
   @PrimaryColumn({ type: 'uuid', name: 'chatUuid' }) chatUuid: string;
 
-  @Column({ type: 'timestamp', default: new Date() }) joinedAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) joinedAt: Date;
 
   @Column({ type: 'timestamp' }) lastRead: Date;
 

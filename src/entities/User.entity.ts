@@ -15,25 +15,25 @@ import { Message } from './Message.entity';
 export class User {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
-  @Column({ type: 'timestamp', default: new Date() }) createdAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 
-  @Column('timestamp') lastSeen: Date;
+  @Column({ type: 'timestamp' }) lastSeen: Date;
 
-  @Column('text') mail: string;
+  @Column({ type: 'text' }) mail: string;
 
-  @Column('text') password: string;
+  @Column({ type: 'text' }) password: string;
 
-  @Column('text') name: string;
+  @Column({ type: 'text' }) name: string;
 
-  @Column('text') tag: string;
+  @Column({ type: 'text' }) tag: string;
 
-  @Column('text') description: string;
+  @Column({ type: 'text' }) description: string;
 
   @Column({ type: 'text', nullable: true }) avatar: string | null;
 
-  @Column('text') locale: string;
+  @Column({ type: 'text' }) locale: string;
 
-  @Column('boolean') online: boolean;
+  @Column({ type: 'boolean' }) online: boolean;
 
   @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   @JoinTable({ name: 'chat_member' })

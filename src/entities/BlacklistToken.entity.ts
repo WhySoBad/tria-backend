@@ -2,7 +2,7 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class BlacklistToken {
-  @PrimaryColumn('uuid') uuid: string;
+  @PrimaryColumn({ type: 'uuid' }) uuid: string;
 
-  @Column('timestamp') expires: Date;
+  @Column({ type: 'timestamp' }) expires: Date;
 }

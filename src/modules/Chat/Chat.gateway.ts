@@ -79,7 +79,6 @@ export class ChatGateway {
     @Body() body: MessageDto,
     @ConnectedSocket() client: Socket
   ): Promise<void> {
-    console.log(new Date());
     try {
       const message: Message = await this.chatService.handleMessage(body.chat, body.data, payload);
       this.server.to(body.chat).emit(ChatEvent.MESSAGE, {
@@ -91,7 +90,6 @@ export class ChatGateway {
         pinned: message.pinned,
         text: message.text,
       });
-      console.log(message.createdAt);
       if (body.actionUuid) {
         this.server.to(client.id).emit(ChatEvent.ACTION_SUCCESS, body.actionUuid);
       }

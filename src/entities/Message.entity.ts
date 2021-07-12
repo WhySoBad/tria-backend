@@ -6,11 +6,11 @@ import { User } from './User.entity';
 export class Message {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
-  @Column('uuid') chatUuid: string;
+  @Column({ type: 'uuid' }) chatUuid: string;
 
-  @Column('uuid') userUuid: string;
+  @Column({ type: 'uuid' }) userUuid: string;
 
-  @Column({ type: 'timestamp', default: new Date() }) createdAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 
   @Column({ type: 'timestamp', nullable: true }) editedAt: Date;
 

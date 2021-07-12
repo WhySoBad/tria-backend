@@ -18,7 +18,7 @@ import { Message } from './Message.entity';
 export class Chat {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
-  @Column('int') type: ChatType;
+  @Column({ type: 'int' }) type: ChatType;
 
   @Column({ type: 'text', nullable: true }) name: string | null;
 
@@ -28,7 +28,7 @@ export class Chat {
 
   @Column({ type: 'text', nullable: true }) avatar: string | null;
 
-  @Column({ type: 'timestamp', default: new Date() }) createdAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 
   @OneToMany(() => ChatMember, (chatMember) => chatMember.chat)
   @JoinTable({ name: 'chat_member' })

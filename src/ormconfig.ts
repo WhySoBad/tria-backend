@@ -21,7 +21,7 @@ const config: TypeOrmModuleOptions = {
   cli: {
     migrationsDir: 'src/migration',
   },
-  timezone: '+1',
+  timezone: 'Z',
 };
 
 export = config;
