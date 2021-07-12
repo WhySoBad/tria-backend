@@ -5,9 +5,11 @@ export class PendingUser {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
   @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date;
+  createdAt: string;
 
-  @Column({ type: 'timestamp' }) expires: Date = new Date(new Date().getTime() + 604800000);
+  @Column({ type: 'timestamp' }) expires: string = new Date(
+    new Date().getTime() + 604800000
+  ).toISOString();
 
   @Column('text') mail: string;
 

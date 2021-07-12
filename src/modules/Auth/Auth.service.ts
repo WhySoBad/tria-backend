@@ -75,7 +75,7 @@ export class AuthService {
     if (banned) throw new UnauthorizedException('Token Is Banned');
     const blacklistToken: BlacklistToken = new BlacklistToken();
     blacklistToken.uuid = uuid;
-    blacklistToken.expires = new Date(exp * 1000);
+    blacklistToken.expires = new Date(exp * 1000).toISOString();
     await this.blacklistRepository.save(blacklistToken);
   }
 
@@ -136,7 +136,7 @@ export class AuthService {
     if (!user) throw new NotFoundException('User Not Found');
     if (update) {
       user.online = false;
-      user.lastSeen = new Date();
+      user.lastSeen = new Date().toISOString();
       await this.userRepository.save(user);
     }
     return user;
@@ -152,8 +152,7 @@ export class AuthService {
   async handleCron(): Promise<void> {
     const tokens: Array<BlacklistToken> = await this.blacklistRepository.find();
     tokens.forEach(async (token: BlacklistToken) => {
-      const date: Date = new Date();
-      if (token.expires < date) await this.blacklistRepository.remove(token);
+      if (new Date(token.expires) < new Date()) await this.blacklistRepository.remove(token);
     });
   }
 }

@@ -4,5 +4,5 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 export class BlacklistToken {
   @PrimaryColumn('uuid') uuid: string;
 
-  @Column('timestamp') expires: Date;
+  @Column('timestamp') expires: string;
 }

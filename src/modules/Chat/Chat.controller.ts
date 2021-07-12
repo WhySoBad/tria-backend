@@ -346,8 +346,8 @@ export class ChatController {
     try {
       const chat: Chat = await this.chatService.handleGet(uuid);
       const messages: Array<any> = chat.messages
-        .filter((message: Message) => message.createdAt.getTime() < timestamp)
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .filter((message: Message) => new Date(message.createdAt).getTime() < timestamp)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map((message: Message) => {
           return {
             uuid: message.uuid,
@@ -364,8 +364,9 @@ export class ChatController {
       const next: Message | undefined = messages.slice(amount, amount + 1)[0];
 
       const log: Array<MemberLog> = chat.memberLog.filter((log: MemberLog) => {
-        const beforeNext: boolean = !next || log.timestamp.getTime() > next.createdAt.getTime();
-        return log.timestamp.getTime() < timestamp && beforeNext;
+        const beforeNext: boolean =
+          !next || new Date(log.timestamp).getTime() > new Date(next.createdAt).getTime();
+        return new Date(log.timestamp).getTime() < timestamp && beforeNext;
       });
 
       const last: boolean = messages.length <= amount;

@@ -9,7 +9,7 @@ export class MemberLog {
 
   @Column('uuid', { primary: true, unique: false }) chatUuid: string;
 
-  @UpdateDateColumn({ type: 'timestamp' }) timestamp: Date;
+  @UpdateDateColumn({ type: 'timestamp' }) timestamp: string;
 
   @Column('boolean', { default: true }) joined: boolean;
 

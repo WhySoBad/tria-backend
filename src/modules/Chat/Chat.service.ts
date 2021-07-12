@@ -81,11 +81,11 @@ export class ChatService {
 
     const chat: Chat = new Chat();
     const creator: ChatMember = new ChatMember();
-    creator.lastRead = new Date();
+    creator.lastRead = new Date().toISOString();
     creator.user = user;
     creator.chat = chat;
     const member: ChatMember = new ChatMember();
-    member.lastRead = new Date();
+    member.lastRead = new Date().toISOString();
     member.user = participant;
     member.chat = chat;
 
@@ -142,7 +142,7 @@ export class ChatService {
     const chat: Chat = new Chat();
     const participants: Array<ChatMember> = users.map(({ user, role }) => {
       const participant: ChatMember = new ChatMember();
-      participant.lastRead = new Date();
+      participant.lastRead = new Date().toISOString();
       participant.user = user;
       participant.chat = chat;
       participant.role = role;
@@ -150,7 +150,7 @@ export class ChatService {
     });
 
     const owner: ChatMember = new ChatMember();
-    owner.lastRead = new Date();
+    owner.lastRead = new Date().toISOString();
     owner.user = user;
     owner.chat = chat;
     owner.role = GroupRole.OWNER;
@@ -241,7 +241,7 @@ export class ChatService {
     await this.memberLogRepository.save(log);
 
     const member: ChatMember = new ChatMember();
-    member.lastRead = new Date();
+    member.lastRead = new Date().toISOString();
     member.chat = chat;
     member.user = user;
 
@@ -425,15 +425,16 @@ export class ChatService {
     timestamp: number,
     payload: TokenPayload
   ): Promise<void> {
+    console.log(timestamp, new Date().getTime());
     if (timestamp > new Date().getTime()) {
       throw new BadRequestException("Timestamp Can't Be In The Future");
     }
     const member: ChatMember | undefined = await this.getMember(chatUuid, payload.user);
     if (!member) throw new NotFoundException('User Not Found');
-    if (member.lastRead.getTime() > timestamp) {
+    if (new Date(member.lastRead).getTime() > timestamp) {
       throw new BadRequestException('User Has Already Read Further');
     }
-    member.lastRead = new Date(timestamp);
+    member.lastRead = new Date(timestamp).toISOString();
     await this.chatMemberRepository.save(member);
   }
 
@@ -540,7 +541,7 @@ export class ChatService {
     if (data.text) {
       message.text = data.text;
       message.edited += 1;
-      message.editedAt = new Date();
+      message.editedAt = new Date().toISOString();
     }
     if (data.pinned != null) message.pinned = data.pinned;
 

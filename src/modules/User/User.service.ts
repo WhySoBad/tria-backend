@@ -145,7 +145,7 @@ export class UserService {
     user.createdAt = pending.createdAt;
     user.avatar = user.uuid;
     user.online = false;
-    user.lastSeen = new Date();
+    user.lastSeen = new Date().toISOString();
 
     await this.pendingUserRepository.remove(pending);
     await this.userRepository.save(user);
@@ -424,8 +424,7 @@ export class UserService {
   private async handleCron() {
     const users: Array<PendingUser> = await this.pendingUserRepository.find();
     users.forEach(async (user: PendingUser) => {
-      const date: Date = new Date();
-      if (user.expires < date) await this.pendingUserRepository.remove(user);
+      if (new Date(user.expires) < new Date()) await this.pendingUserRepository.remove(user);
     });
   }
 }

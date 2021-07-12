@@ -9,7 +9,7 @@ export class BannedMember {
 
   @PrimaryColumn({ type: 'uuid', name: 'chatUuid' }) chatUuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) bannedAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) bannedAt: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userUuid' })

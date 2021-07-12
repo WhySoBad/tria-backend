@@ -15,9 +15,9 @@ import { Message } from './Message.entity';
 export class User {
   @PrimaryGeneratedColumn('uuid') uuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) createdAt: string;
 
-  @Column('timestamp') lastSeen: Date;
+  @Column('timestamp') lastSeen: string;
 
   @Column('text') mail: string;
 

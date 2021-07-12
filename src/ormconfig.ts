@@ -21,18 +21,7 @@ const config: TypeOrmModuleOptions = {
   cli: {
     migrationsDir: 'src/migration',
   },
+  timezone: '+1',
 };
 
 export = config;
-
-// [!] Command to run typeorm migrations [!]
-//
-//node --require ts-node/register ./node_modules/typeorm/cli.js migration:run --config "src/ormconfig"
-//
-// [!] Command to create typeorm migration [!]
-//
-//ts-node ./node_modules/typeorm/cli.js  migration:create "-n" "BlacklistTokenTableExpiresDeleteAt" "-d" "src/migration"
-//
-// [!] Command to generatoe typeorm migration [!]
-//
-//ts-node ./node_modules/typeorm/cli.js  migration:generate "-n" "ChatTableGenerate" "-d" "src/migration" --config "src/ormconfig"

@@ -10,7 +10,7 @@ export class ChatAdmin {
 
   @Column('uuid', { primary: true, unique: false }) chatUuid: string;
 
-  @CreateDateColumn({ type: 'timestamp' }) promotedAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) promotedAt: string;
 
   @OneToMany(() => AdminPermission, (adminPermission) => adminPermission.admins, {
     onDelete: 'CASCADE',

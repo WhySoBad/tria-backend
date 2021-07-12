@@ -28,7 +28,7 @@ export class Chat {
 
   @Column({ type: 'text', nullable: true }) avatar: string | null;
 
-  @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
+  @CreateDateColumn({ type: 'timestamp' }) createdAt: string;
 
   @OneToMany(() => ChatMember, (chatMember) => chatMember.chat)
   @JoinTable({ name: 'chat_member' })
