@@ -95,6 +95,8 @@ export class ChatService {
 
     await this.chatRepository.save(chat);
 
+    const logs: Array<MemberLog> = [];
+
     for await (const member of chat.members) {
       const log: MemberLog = new MemberLog();
       log.chat = chat;
@@ -103,10 +105,12 @@ export class ChatService {
       log.userUuid = member.userUuid;
       log.joined = true;
       await this.memberLogRepository.save(log);
+      logs.push(log);
     }
 
+    chat.memberLog = logs;
+    await this.chatRepository.save(chat);
     await this.chatMemberRepository.save(chat.members);
-
     await this.chatGateway.handlePrivateCreate(chat);
   }
 
@@ -629,6 +633,9 @@ export class ChatService {
         const admin: ChatAdmin = new ChatAdmin();
         admin.chat = chat;
         admin.user = member.user;
+        admin.permissions = [];
+        member.role = GroupRole.ADMIN;
+        await this.chatAdminRepository.save(admin);
         admin.permissions = await Promise.all(
           permissions.map(async (perm: Permission) => {
             const permission: AdminPermission = new AdminPermission();
@@ -639,7 +646,7 @@ export class ChatService {
             return permission;
           })
         );
-        await this.chatMemberRepository.save({ ...member, role: GroupRole.ADMIN });
+        await this.chatMemberRepository.save(member);
         await this.chatAdminRepository.save(admin);
         return admin;
       }
@@ -839,7 +846,7 @@ export class ChatService {
     await this.memberLogRepository.save(log);
 
     await this.chatMemberRepository.remove(member);
-    this.chatGateway.handleGroupUserLeave(chat.uuid, member.userUuid);
+    this.chatGateway.handleGroupUserLeave(chat.uuid, log.userUuid);
   }
 
   /**
@@ -853,7 +860,8 @@ export class ChatService {
    */
 
   async deleteChat(chat: Chat): Promise<void> {
+    const uuid: string = chat.uuid;
     await this.chatRepository.remove(chat);
-    this.chatGateway.handleChatDelete(chat.uuid);
+    this.chatGateway.handleChatDelete(uuid);
   }
 }

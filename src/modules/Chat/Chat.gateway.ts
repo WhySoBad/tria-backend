@@ -395,6 +395,7 @@ export class ChatGateway {
    */
 
   async handlePrivateCreate(chat: Chat): Promise<void> {
+    console.log(chat.members, chat.memberLog);
     await Promise.all(
       chat.members.map(async (member: ChatMember) => {
         try {
@@ -407,18 +408,7 @@ export class ChatGateway {
       uuid: chat.uuid,
       type: ChatType[chat.type],
       createdAt: chat.createdAt,
-      messages: chat.messages.map((message: Message) => {
-        return {
-          uuid: message.uuid,
-          sender: message.userUuid,
-          chat: message.chatUuid,
-          createdAt: message.createdAt,
-          editedAt: message.editedAt,
-          edited: message.edited,
-          pinned: message.pinned,
-          text: message.text,
-        };
-      }),
+      messages: [],
       memberLog: chat.memberLog.map((memberLog: MemberLog) => {
         return {
           user: memberLog.userUuid,
