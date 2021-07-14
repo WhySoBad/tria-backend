@@ -358,16 +358,13 @@ export class ChatGateway {
       const token: string = client.handshake.headers.authorization;
       try {
         const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
-        if (!payload) throw new BadRequestException('Invalid Token');
-        const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-        if (banned) throw new BadRequestException('Token Is Banned');
-        if (payload.user == userUuid) client.leave(chatUuid);
-
-        this.server.to(chatUuid).emit(ChatEvent.MEMBER_BAN, { chat: chatUuid, user: userUuid });
-      } catch (exception) {
-        throw exception;
-      }
+        if (payload) {
+          const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
+          if (payload.user == userUuid && !banned) client.leave(chatUuid);
+        }
+      } catch (exception) {}
     }
+    this.server.to(chatUuid).emit(ChatEvent.MEMBER_BAN, { chat: chatUuid, user: userUuid });
   }
 
   /**
@@ -384,10 +381,8 @@ export class ChatGateway {
     try {
       const client: Socket | undefined = await this.getSocketForUser(userUuid);
       if (!client) throw new NotFoundException('User Not Found');
-      client.emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
-    } catch (exception) {
-      throw exception;
-    }
+      if (client) client.emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
+    } catch (exception) {}
     this.server.to(chatUuid).emit(ChatEvent.MEMBER_UNBAN, { chat: chatUuid, user: userUuid });
   }
 
@@ -404,11 +399,8 @@ export class ChatGateway {
       chat.members.map(async (member: ChatMember) => {
         try {
           const client: Socket | undefined = await this.getSocketForUser(member.userUuid);
-          if (!client) return;
-          await new Promise((resolve) => client.join(chat.uuid, resolve));
-        } catch (exception) {
-          throw exception;
-        }
+          if (client) await new Promise((resolve) => client.join(chat.uuid, resolve));
+        } catch (exception) {}
       })
     );
     this.server.to(chat.uuid).emit(ChatEvent.PRIVATE_CREATE, {
@@ -461,11 +453,8 @@ export class ChatGateway {
       chat.members.map(async (member: ChatMember) => {
         try {
           const client: Socket | undefined = await this.getSocketForUser(member.userUuid);
-          if (!client) return;
-          await new Promise((resolve) => client.join(chat.uuid, resolve));
-        } catch (exception) {
-          throw exception;
-        }
+          if (client) await new Promise((resolve) => client.join(chat.uuid, resolve));
+        } catch (exception) {}
       })
     );
 
