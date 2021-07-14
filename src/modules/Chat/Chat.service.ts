@@ -8,7 +8,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { unlinkSync } from 'fs';
 import { access } from 'fs/promises';
-import { Repository } from 'typeorm';
+import { async } from 'rxjs';
+import { Admin, Repository } from 'typeorm';
 import { config } from '../../config';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { BannedMember } from '../../entities/BannedMember.entity';
@@ -459,6 +460,8 @@ export class ChatService {
     message.userUuid = sender.userUuid;
     message.text = text;
     await this.messageRepository.save(message);
+    sender.lastRead = new Date();
+    await this.chatMemberRepository.save(sender);
     return message;
   }
 
@@ -593,6 +596,10 @@ export class ChatService {
     }
 
     if (roleId === GroupRole.OWNER) {
+      if (member.role === GroupRole.ADMIN) {
+        const admin: ChatAdmin | undefined = await this.getAdmin(chat.uuid, member.userUuid);
+        if (admin) await this.chatAdminRepository.remove(admin);
+      }
       await this.chatMemberRepository.save({ ...sender, role: GroupRole.MEMBER });
       await this.chatMemberRepository.save({ ...member, role: GroupRole.OWNER });
       return [member, sender];
@@ -601,31 +608,37 @@ export class ChatService {
       if (member.role === GroupRole.ADMIN) {
         const admin: ChatAdmin | undefined = await this.getAdmin(chat, data.user);
         if (!admin) throw new NotFoundException('Admin Not Found');
-        await this.chatAdminRepository.save({
-          ...admin,
-          permissions: await Promise.all(
-            permissions.map(async (perm: Permission) => {
-              const permission: AdminPermission = new AdminPermission();
-              permission.permission = perm;
-              permission.userUuid = admin.userUuid;
-              permission.chatUuid = admin.chatUuid;
-              await this.adminPermissionRepository.save(permission);
-              return permission;
-            })
-          ),
-        });
+        const currentPermissions: Array<AdminPermission> = await this.adminPermissionRepository.find(
+          { chatUuid: chat.uuid, userUuid: member.userUuid }
+        );
+        await this.adminPermissionRepository.remove(currentPermissions);
+        const newPermissions: Array<AdminPermission> = [];
+
+        for (const perm of permissions) {
+          const permission: AdminPermission = new AdminPermission();
+          permission.permission = perm;
+          permission.userUuid = admin.userUuid;
+          permission.chatUuid = admin.chatUuid;
+          await this.adminPermissionRepository.save(permission);
+          newPermissions.push(permission);
+        }
+        admin.permissions = newPermissions;
+        await this.chatAdminRepository.save(admin);
         return admin;
       } else {
         const admin: ChatAdmin = new ChatAdmin();
         admin.chat = chat;
         admin.user = member.user;
-        admin.permissions = permissions.map((perm: Permission) => {
-          const permission: AdminPermission = new AdminPermission();
-          permission.permission = perm;
-          permission.userUuid = admin.userUuid;
-          permission.chatUuid = admin.chatUuid;
-          return permission;
-        });
+        admin.permissions = await Promise.all(
+          permissions.map(async (perm: Permission) => {
+            const permission: AdminPermission = new AdminPermission();
+            permission.permission = perm;
+            permission.userUuid = member.userUuid;
+            permission.chatUuid = chat.uuid;
+            await this.adminPermissionRepository.save(permission);
+            return permission;
+          })
+        );
         await this.chatMemberRepository.save({ ...member, role: GroupRole.ADMIN });
         await this.chatAdminRepository.save(admin);
         return admin;

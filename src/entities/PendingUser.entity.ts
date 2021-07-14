@@ -6,7 +6,7 @@ export class PendingUser {
 
   @CreateDateColumn({ type: 'timestamp' }) createdAt: Date;
 
-  @Column({ type: 'timestamp', default: new Date(new Date().getTime() + 604800000) }) expires: Date;
+  @Column({ type: 'timestamp' }) expires: Date = new Date(new Date().getTime() + 604800000);
 
   @Column({ type: 'text' }) mail: string;
 

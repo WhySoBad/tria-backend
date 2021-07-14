@@ -8,7 +8,6 @@ import { GlobalExceptionFilter } from './filters/GlobalExceptionFilter.filter';
 import { GlobalResponseInterceptor } from './interceptors/GlobalResponseInterceptor.interceptor';
 
 async function bootstrap(): Promise<void> {
-  console.log(new Date().getTimezoneOffset());
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalInterceptors(new GlobalResponseInterceptor());
   app.useGlobalFilters(new GlobalExceptionFilter());

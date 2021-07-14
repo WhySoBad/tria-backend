@@ -1,9 +1,9 @@
-import { Column, Entity, Index, JoinColumn, JoinTable, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Entity, Index, JoinColumn, JoinTable, ManyToOne, PrimaryColumn } from 'typeorm';
 import { Permission } from '../modules/Chat/Chat.interface';
 import { ChatAdmin } from './ChatAdmin.entity';
 
 @Entity()
-@Index(['userUuid', 'chatUuid'], { unique: true })
+@Index(['userUuid', 'chatUuid', 'permission'], { unique: true })
 export class AdminPermission {
   @PrimaryColumn('int')
   permission: Permission;
