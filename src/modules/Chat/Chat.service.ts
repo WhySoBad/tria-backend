@@ -329,7 +329,7 @@ export class ChatService {
 
     await this.bannedMemberRepository.save(banned);
     await this.chatMemberRepository.remove(member);
-    this.chatGateway.handleMemberBan(chat.uuid, member.userUuid);
+    this.chatGateway.handleMemberBan(chat.uuid, banned.userUuid);
   }
 
   /**
@@ -358,7 +358,7 @@ export class ChatService {
     });
     if (!member) throw new NotFoundException('User Not Found');
     await this.bannedMemberRepository.remove(member);
-    this.chatGateway.handleMemberUnban(chat.uuid, member.userUuid);
+    this.chatGateway.handleMemberUnban(chat.uuid, uuid);
   }
 
   /**
