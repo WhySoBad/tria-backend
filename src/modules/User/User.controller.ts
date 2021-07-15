@@ -318,6 +318,7 @@ export class UserController {
         name: user.name,
         tag: user.tag,
         description: user.description,
+        avatar: user.avatar,
       };
     } catch (exception) {
       throw exception;

@@ -163,6 +163,7 @@ export class SearchService {
         description: description,
         size: members.length,
         online: members.filter(({ user: { online } }) => online).length,
+        avatar: chat.avatar,
         weight: 0,
       };
 
@@ -192,13 +193,14 @@ export class SearchService {
     });
 
     const users: Array<WeightedEntry<UserPreview>> = (await getUser()).map((user: User) => {
-      const { uuid, name, tag, description } = user;
+      const { uuid, name, tag, description, avatar } = user;
       let weight: number = 0;
       const weighted: WeightedEntry<UserPreview> = {
         uuid: uuid,
         name: name,
         tag: tag,
         description: description,
+        avatar: avatar,
         weight: 0,
       };
 

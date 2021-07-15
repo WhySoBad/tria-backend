@@ -26,6 +26,7 @@ export interface ChatPreview {
   description: string | null;
   size: number;
   online: number;
+  avatar: string | null;
 }
 
 export enum ChatEvent {

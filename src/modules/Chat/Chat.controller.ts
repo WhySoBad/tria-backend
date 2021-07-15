@@ -315,6 +315,7 @@ export class ChatController {
         tag: chat.tag,
         size: chat.members.length,
         online: chat.members.filter(({ user: { online } }) => online).length,
+        avatar: chat.avatar,
       };
     } catch (exception) {
       throw exception;
@@ -403,6 +404,7 @@ export class ChatController {
   ): Promise<any> {
     try {
       await this.chatService.handleMessageRead(uuid, timestamp, payload);
+      console.log(new Date(((await this.get(payload, uuid)) as any).lastRead).getTime());
     } catch (exception) {
       throw exception;
     }

@@ -435,10 +435,11 @@ export class ChatService {
     }
     const member: ChatMember | undefined = await this.getMember(chatUuid, payload.user);
     if (!member) throw new NotFoundException('User Not Found');
-    if (new Date(member.lastRead).getTime() > timestamp) {
+    if (member.lastRead.getTime() > timestamp) {
       throw new BadRequestException('User Has Already Read Further');
     }
-    member.lastRead = new Date(timestamp);
+    member.lastRead = new Date(timestamp + 1000);
+    console.log(member.lastRead.getTime(), timestamp);
     await this.chatMemberRepository.save(member);
   }
 

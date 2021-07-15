@@ -3,6 +3,7 @@ export interface UserPreview {
   name: string;
   tag: string;
   description: string;
+  avatar: string | null;
 }
 
 export enum UserEvent {
