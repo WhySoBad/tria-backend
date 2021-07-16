@@ -439,7 +439,6 @@ export class ChatService {
       throw new BadRequestException('User Has Already Read Further');
     }
     member.lastRead = new Date(timestamp + 1000);
-    console.log(member.lastRead.getTime(), timestamp);
     await this.chatMemberRepository.save(member);
   }
 

@@ -195,17 +195,21 @@ export class ChatGateway {
             permissions: [],
           });
         });
-      } else {
-        const isAdmin: boolean = member instanceof ChatAdmin;
+      } else if (member instanceof ChatAdmin) {
         this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
           chat: body.chat,
           user: member.userUuid,
-          role: isAdmin ? 'ADMIN' : GroupRole[(member as any).role],
-          permissions: isAdmin
-            ? (member as any).permissions.map(({ permission }: AdminPermission) => {
-                Permission[permission];
-              })
-            : [],
+          role: 'ADMIN',
+          permissions: member.permissions.map(({ permission }: AdminPermission) => {
+            return Permission[permission];
+          }),
+        });
+      } else {
+        this.server.to(body.chat).emit(ChatEvent.MEMBER_EDIT, {
+          chat: body.chat,
+          user: member.userUuid,
+          role: GroupRole[member.role],
+          permissions: [],
         });
       }
       if (body.actionUuid) {
@@ -395,7 +399,6 @@ export class ChatGateway {
    */
 
   async handlePrivateCreate(chat: Chat): Promise<void> {
-    console.log(chat.members, chat.memberLog);
     await Promise.all(
       chat.members.map(async (member: ChatMember) => {
         try {

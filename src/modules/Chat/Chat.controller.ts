@@ -404,7 +404,6 @@ export class ChatController {
   ): Promise<any> {
     try {
       await this.chatService.handleMessageRead(uuid, timestamp, payload);
-      console.log(new Date(((await this.get(payload, uuid)) as any).lastRead).getTime());
     } catch (exception) {
       throw exception;
     }
