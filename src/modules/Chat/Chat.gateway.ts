@@ -331,6 +331,7 @@ export class ChatGateway {
    */
 
   async handleGroupUserLeave(chatUuid: string, userUuid: string): Promise<void> {
+    this.server.to(chatUuid).emit(ChatEvent.MEMBER_LEAVE, { chat: chatUuid, user: userUuid });
     const sockets: { [id: string]: Socket } = this.server.clients().sockets;
     for (let socket in sockets) {
       const client: Socket = sockets[socket];
@@ -340,7 +341,6 @@ export class ChatGateway {
         if (clientPayload?.user === userUuid) client.leave(chatUuid);
       }
     }
-    this.server.to(chatUuid).emit(ChatEvent.MEMBER_LEAVE, { chat: chatUuid, user: userUuid });
   }
 
   /**
