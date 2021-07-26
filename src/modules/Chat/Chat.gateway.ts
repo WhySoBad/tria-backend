@@ -276,15 +276,8 @@ export class ChatGateway {
     userUuid: string,
     payload: TokenPayload
   ): Promise<void> {
-    const sockets: { [id: string]: Socket } = this.server.clients().sockets;
-    for (let socket in sockets) {
-      const client: Socket = sockets[socket];
-      const clientToken: string = client.handshake.headers['authorization']?.substr(7);
-      if (clientToken) {
-        const clientPayload: TokenPayload | undefined = JwtService.DecodeToken(clientToken);
-        if (clientPayload?.user == payload.uuid) client.join(chatUuid);
-      }
-    }
+    const client = await this.getSocketForUser(userUuid);
+    if (client) await new Promise((resolve) => client.join(chatUuid, resolve));
 
     const chat: Chat | undefined = await this.chatRepository
       .createQueryBuilder('chat')
