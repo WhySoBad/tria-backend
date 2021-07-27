@@ -90,7 +90,7 @@ export class ChatController {
    *
    * @param body uuid of the participant
    *
-   * @returns Promise<void>
+   * @returns Promise<string>
    */
 
   @Post('create/private')
@@ -98,9 +98,10 @@ export class ChatController {
   async createPrivate(
     @Authorization() payload: TokenPayload,
     @Body() body: PrivateChatDto
-  ): Promise<void> {
+  ): Promise<string> {
     try {
-      await this.chatService.handlePrivateCreate(body.user, payload);
+      const uuid: string = await this.chatService.handlePrivateCreate(body.user, payload);
+      return uuid;
     } catch (exception) {
       throw exception;
     }
@@ -113,7 +114,7 @@ export class ChatController {
    *
    * @param body request body
    *
-   * @returns Promise<void>
+   * @returns Promise<string>
    */
 
   @Post('create/group')
@@ -121,9 +122,10 @@ export class ChatController {
   async createGroup(
     @Authorization() payload: TokenPayload,
     @Body() body: GroupChatDto
-  ): Promise<void> {
+  ): Promise<string> {
     try {
-      await this.chatService.handleGroupCreate(body, payload);
+      const uuid: string = await this.chatService.handleGroupCreate(body, payload);
+      return uuid;
     } catch (exception) {
       throw exception;
     }

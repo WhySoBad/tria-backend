@@ -49,10 +49,10 @@ export class ChatService {
    *
    * @param payload payload of user jwt
    *
-   * @returns Promise<HandleService<void>>
+   * @returns Promise<string>
    */
 
-  async handlePrivateCreate(participantUuid: string, payload: TokenPayload): Promise<void> {
+  async handlePrivateCreate(participantUuid: string, payload: TokenPayload): Promise<string> {
     const user: User | undefined = await this.getUser(payload.user);
     if (!user) throw new NotFoundException('User Not Found');
     const participant: User | undefined = await this.getUser(participantUuid);
@@ -114,6 +114,7 @@ export class ChatService {
     await this.chatRepository.save(chat);
     await this.chatMemberRepository.save(chat.members);
     await this.chatGateway.handlePrivateCreate(chat);
+    return chat.uuid;
   }
 
   /**
@@ -123,10 +124,10 @@ export class ChatService {
    *
    * @param payload payload of user jwt
    *
-   * @returns Promise<void>
+   * @returns Promise<string>
    */
 
-  async handleGroupCreate(settings: GroupChatDto, payload: TokenPayload): Promise<void> {
+  async handleGroupCreate(settings: GroupChatDto, payload: TokenPayload): Promise<string> {
     const user: User | undefined = await this.getUser(payload.user);
     if (!user) throw new NotFoundException('User Not Found');
 
@@ -197,6 +198,7 @@ export class ChatService {
 
     const finalChat: Chat | undefined = await this.handleGet(chat.uuid);
     if (finalChat) await this.chatGateway.handleGroupCreate(finalChat);
+    return finalChat.uuid;
   }
 
   /**

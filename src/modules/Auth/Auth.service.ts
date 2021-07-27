@@ -34,6 +34,8 @@ export class AuthService {
   async handleValidate(token: string): Promise<boolean> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) return false;
+    const exists: boolean = !!(await this.userRepository.findOne({ uuid: payload.user }));
+    if (!exists) return false;
     return !(await this.jwtService.isTokenBanned(payload.uuid));
   }
 
