@@ -104,6 +104,8 @@ export class ChatService {
       log.user = member.user;
       log.userUuid = member.userUuid;
       log.joined = true;
+      log.timestamp = new Date();
+
       await this.memberLogRepository.save(log);
       logs.push(log);
     }
@@ -186,6 +188,8 @@ export class ChatService {
       log.user = member.user;
       log.userUuid = member.userUuid;
       log.joined = true;
+      log.timestamp = new Date();
+
       await this.memberLogRepository.save(log);
     }
 
@@ -243,6 +247,8 @@ export class ChatService {
     log.user = user;
     log.userUuid = user.uuid;
     log.joined = true;
+    log.timestamp = new Date();
+
     await this.memberLogRepository.save(log);
 
     const member: ChatMember = new ChatMember();
@@ -843,6 +849,8 @@ export class ChatService {
     log.user = member.user;
     log.userUuid = member.userUuid;
     log.joined = true;
+    log.timestamp = new Date();
+
     await this.memberLogRepository.save(log);
 
     await this.chatMemberRepository.remove(member);
