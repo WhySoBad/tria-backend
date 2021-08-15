@@ -8,8 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { unlinkSync } from 'fs';
 import { access } from 'fs/promises';
-import { async } from 'rxjs';
-import { Admin, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { config } from '../../config';
 import { AdminPermission } from '../../entities/AdminPermission.entity';
 import { BannedMember } from '../../entities/BannedMember.entity';
@@ -25,7 +24,7 @@ import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
 import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import { ChatGateway } from './Chat.gateway';
-import { Permission, GroupRole, ChatType } from './Chat.interface';
+import { ChatType, GroupRole, Permission } from './Chat.interface';
 
 @Injectable()
 export class ChatService {
@@ -663,7 +662,8 @@ export class ChatService {
     const admin: ChatAdmin | undefined = await this.getAdmin(chat, data.user);
     if (!admin) throw new NotFoundException('Admin Not Found');
     await this.chatAdminRepository.remove(admin);
-    await this.chatMemberRepository.save({ ...member, role: GroupRole.MEMBER });
+    member.role = GroupRole.MEMBER;
+    await this.chatMemberRepository.save(member);
     return member;
   }
 

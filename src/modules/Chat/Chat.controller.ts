@@ -38,7 +38,7 @@ import { KickMemberDto } from '../../pipes/validation/KickMemberDto.dto';
 import { PrivateChatDto } from '../../pipes/validation/PrivateChatDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
-import { Permission, ChatPreview, GroupRole, ChatType } from './Chat.interface';
+import { ChatPreview, ChatType, GroupRole, Permission } from './Chat.interface';
 import { ChatService } from './Chat.service';
 
 const uploadConfig: MulterOptions = {

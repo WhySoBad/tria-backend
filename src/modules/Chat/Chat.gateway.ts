@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   forwardRef,
   Inject,
@@ -19,25 +18,25 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Repository } from 'typeorm';
+import Authorization from '../../decorators/Authorization.decorator';
+import { AdminPermission } from '../../entities/AdminPermission.entity';
+import { BannedMember } from '../../entities/BannedMember.entity';
 import { Chat } from '../../entities/Chat.entity';
 import { ChatAdmin } from '../../entities/ChatAdmin.entity';
 import { ChatMember } from '../../entities/ChatMember.entity';
+import { MemberLog } from '../../entities/MemberLog.entity';
 import { Message } from '../../entities/Message.entity';
 import { User } from '../../entities/User.entity';
-import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import { Permission, ChatEvent, ChatType, GroupRole } from './Chat.interface';
 import WsExceptionFilter from '../../filters/WsExceptionFilter.filter';
-import { JwtService } from '../Auth/Jwt/Jwt.service';
-import { ChatService } from './Chat.service';
-import { MessageDto } from '../../pipes/validation/MessageDto.dto';
-import Authorization from '../../decorators/Authorization.decorator';
 import AuthGuard from '../../guards/AuthGuard.guard';
 import { ChatEditDto } from '../../pipes/validation/ChatEditDto.dto';
-import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
 import { MemberEditDto } from '../../pipes/validation/MemberEditDto.dto';
-import { AdminPermission } from '../../entities/AdminPermission.entity';
-import { BannedMember } from '../../entities/BannedMember.entity';
-import { MemberLog } from '../../entities/MemberLog.entity';
+import { MessageDto } from '../../pipes/validation/MessageDto.dto';
+import { MessageEditDto } from '../../pipes/validation/MessageEditDto.dto';
+import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
+import { JwtService } from '../Auth/Jwt/Jwt.service';
+import { ChatEvent, ChatType, GroupRole, Permission } from './Chat.interface';
+import { ChatService } from './Chat.service';
 
 @WebSocketGateway({
   handlePreflightRequest: (req: any, res: any) => {

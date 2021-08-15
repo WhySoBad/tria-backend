@@ -1,15 +1,15 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './modules/Auth/Auth.module';
-import { UserModule } from './modules/User/User.module';
-import * as config from './ormconfig';
-import { AppController } from './app.controller';
-import { ChatModule } from './modules/Chat/Chat.module';
-import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppController } from './app.controller';
+import { AuthModule } from './modules/Auth/Auth.module';
+import { ChatModule } from './modules/Chat/Chat.module';
 import { SearchModule } from './modules/Search/Search.module';
+import { UserModule } from './modules/User/User.module';
+import * as config from './ormconfig';
 
 @Module({
   imports: [

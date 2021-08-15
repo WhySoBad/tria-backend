@@ -7,14 +7,14 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { User } from '../../entities/User.entity';
-import { AuthService } from './Auth.service';
 import { v4 } from 'uuid';
 import Authorization from '../../decorators/Authorization.decorator';
+import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard.guard';
-import { JwtService } from './Jwt/Jwt.service';
 import { CredentialsDto } from '../../pipes/validation/CredentialsDto.dto';
+import { AuthService } from './Auth.service';
 import { TokenPayload, TokenType } from './Jwt/Jwt.interface';
+import { JwtService } from './Jwt/Jwt.service';
 
 /**
  * Auth controller to validate tokens, start handshake, login and logout users

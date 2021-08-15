@@ -13,29 +13,29 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import { Response } from 'express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import { config } from '../../config';
 import Authorization from '../../decorators/Authorization.decorator';
 import { ChatMember } from '../../entities/ChatMember.entity';
 import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard.guard';
 import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
+import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
+import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
+import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
+import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
 import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
+import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
+import { UserMailDto } from '../../pipes/validation/UserMailDto.dto';
+import { UserTagDto } from '../../pipes/validation/UserTagDto.dto';
+import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
+import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { UserPreview } from './User.interface';
 import { UserService } from './User.service';
-import { diskStorage } from 'multer';
-import * as path from 'path';
-import { JwtService } from '../Auth/Jwt/Jwt.service';
-import { config } from '../../config';
-import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
-import { Response } from 'express';
-import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
-import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
-import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
-import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
-import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
-import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
-import { UserTagDto } from '../../pipes/validation/UserTagDto.dto';
-import { UserMailDto } from '../../pipes/validation/UserMailDto.dto';
 
 const uploadConfig: MulterOptions = {
   fileFilter: (req: any, file: any, callback: any) => {

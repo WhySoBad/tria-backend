@@ -1,3 +1,4 @@
+import { MailerService } from '@nestjs-modules/mailer';
 import {
   BadRequestException,
   Injectable,
@@ -6,29 +7,27 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { unlinkSync } from 'fs';
+import { access } from 'fs/promises';
 import { Repository } from 'typeorm';
 import { v4 } from 'uuid';
 import { config } from '../../config';
+import { ChatMember } from '../../entities/ChatMember.entity';
 import { PendingUser } from '../../entities/PendingUser.entity';
 import { User } from '../../entities/User.entity';
 import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
-import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
 import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
-import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
 import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
+import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
 import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
+import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
+import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
 import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
-import { MailerService } from '@nestjs-modules/mailer';
-import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
-import { unlinkSync } from 'fs';
-import { access } from 'fs/promises';
-import { UserGateway } from './User.gateway';
-import { Chat } from '../../entities/Chat.entity';
 import { ChatType } from '../Chat/Chat.interface';
 import { ChatService } from '../Chat/Chat.service';
-import { ChatMember } from '../../entities/ChatMember.entity';
+import { UserGateway } from './User.gateway';
 
 @Injectable()
 export class UserService {

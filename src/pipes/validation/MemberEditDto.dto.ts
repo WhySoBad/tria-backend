@@ -7,7 +7,7 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { Permission, GroupRole } from '../../modules/Chat/Chat.interface';
+import { GroupRole, Permission } from '../../modules/Chat/Chat.interface';
 
 export class MemberEditDto {
   @IsOptional()

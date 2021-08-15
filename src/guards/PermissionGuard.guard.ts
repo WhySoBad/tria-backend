@@ -7,8 +7,6 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { TimeoutError } from 'rxjs';
-import { ChatAdmin } from '../entities/ChatAdmin.entity';
 import { ChatMember } from '../entities/ChatMember.entity';
 import { TokenPayload } from '../modules/Auth/Jwt/Jwt.interface';
 import { JwtService } from '../modules/Auth/Jwt/Jwt.service';
