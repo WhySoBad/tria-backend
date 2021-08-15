@@ -338,6 +338,16 @@ export class ChatService {
     banned.user = member.user;
     banned.userUuid = member.userUuid;
 
+    const log: MemberLog = new MemberLog();
+    log.chat = chat;
+    log.chatUuid = chat.uuid;
+    log.user = member.user;
+    log.userUuid = member.userUuid;
+    log.joined = true;
+    log.timestamp = new Date();
+
+    await this.memberLogRepository.save(log);
+
     await this.bannedMemberRepository.save(banned);
     await this.chatMemberRepository.remove(member);
     this.chatGateway.handleMemberBan(chat.uuid, banned.userUuid);
@@ -391,7 +401,7 @@ export class ChatService {
     const member: ChatMember | undefined = await this.getMember(chat, uuid);
     if (!member) throw new NotFoundException('User Not Found');
     if (member.role === GroupRole.OWNER) throw new UnauthorizedException("Owner Can't Be Kicked");
-    await this.chatMemberRepository.remove(member);
+    await this.leaveChat(chat, member);
   }
 
   /**
