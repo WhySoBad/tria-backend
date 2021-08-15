@@ -343,7 +343,7 @@ export class ChatService {
     log.chatUuid = chat.uuid;
     log.user = member.user;
     log.userUuid = member.userUuid;
-    log.joined = true;
+    log.joined = false;
     log.timestamp = new Date();
 
     await this.memberLogRepository.save(log);
@@ -860,7 +860,7 @@ export class ChatService {
     log.chatUuid = chat.uuid;
     log.user = member.user;
     log.userUuid = member.userUuid;
-    log.joined = true;
+    log.joined = false;
     log.timestamp = new Date();
 
     await this.memberLogRepository.save(log);
