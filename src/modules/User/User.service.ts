@@ -84,8 +84,11 @@ export class UserService {
       to: user.mail,
       subject: 'Account Registration',
       from: config.noreplyMail,
-      text: token,
-      html: `<div>${token}</div>`,
+      template: 'registration',
+      text: `Thanks for registrating a new account. Paste the following url into your browser to finish the registration \n${config.website}/register/${token} \nIf you haven't registered any account you can ignore this email \nthe data will be deleted after seven days`,
+      context: {
+        href: `${config.website}/register/${token}`,
+      },
     });
   }
 
@@ -269,8 +272,11 @@ export class UserService {
         to: data.mail,
         from: config.noreplyMail,
         subject: 'Password Reset',
-        text: token,
-        html: `<div>${token}</div>`,
+        text: `You've successfully resetted your password! Paste the following url into your browser to set a new password \n${config.website}/register/${token} \nIf you haven't requested the password reset you can ignore this email \nthe data will be deleted after five days`,
+        template: 'passwordreset',
+        context: {
+          href: `${config.website}/passwordreset/${token}`,
+        },
       })
       .catch(() => {
         throw new ServiceUnavailableException('Failed To Send Mail');

@@ -5,4 +5,5 @@ export const config = {
   avatarSize: 100000,
   avatarType: '.jpg',
   noreplyMail: 'noreply@test.chat',
+  website: 'http://localhost:3000',
 };
