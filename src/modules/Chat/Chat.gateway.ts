@@ -355,8 +355,7 @@ export class ChatGateway {
       try {
         const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
         if (payload) {
-          const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-          if (payload.user == userUuid && !banned) client.leave(chatUuid);
+          if (payload.user == userUuid) client.leave(chatUuid);
         }
       } catch (exception) {}
     }
@@ -532,8 +531,6 @@ export class ChatGateway {
       try {
         const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
         if (!payload) continue;
-        const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-        if (banned) continue;
         if (payload.user === uuid) return client;
       } catch (exception) {
         throw exception;

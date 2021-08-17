@@ -19,11 +19,7 @@ class WsAuthGuard implements CanActivate {
       socket.error('Invalid Token');
       return false;
     }
-    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-    if (banned) {
-      socket.error('Token Is Banned');
-      return false;
-    } else return true;
+    return true;
   }
 }
 

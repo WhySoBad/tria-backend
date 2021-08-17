@@ -1,17 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { SHA256 } from 'crypto-js';
 import { sign, verify } from 'jsonwebtoken';
-import { Repository } from 'typeorm';
 import { config } from '../../../config';
-import { BlacklistToken } from '../../../entities/BlacklistToken.entity';
 import { TokenPayload, TokenType } from './Jwt.interface';
 
 @Injectable()
 export class JwtService {
-  constructor(
-    @InjectRepository(BlacklistToken) private blacklistRepository: Repository<BlacklistToken>
-  ) {}
+  constructor() {}
 
   /**
    * Function to generate a 90d valid jwt for a specific payload
@@ -79,19 +74,5 @@ export class JwtService {
 
   public static async Hash(text: string): Promise<string> {
     return SHA256(text as string).toString();
-  }
-
-  /**
-   * Function to check whether a token is banned or not
-   *
-   * @param uuid uuid of the token
-   *
-   * @returns Promise<boolean>
-   */
-
-  public async isTokenBanned(uuid: string): Promise<boolean> {
-    return !!(await this.blacklistRepository.findOne({
-      uuid: uuid,
-    }));
   }
 }

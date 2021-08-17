@@ -28,8 +28,6 @@ class RoleGuard implements CanActivate {
     if (!token) throw new BadRequestException('Missing Token');
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
-    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-    if (banned) throw new BadRequestException('Token Is Banned');
 
     const chatUuid: string = request.params.uuid;
     const roles: Array<GroupRole> = this.reflector.get<Array<GroupRole>>(

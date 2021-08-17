@@ -1,19 +1,9 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Post,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Request } from '@nestjs/common';
 import { v4 } from 'uuid';
-import Authorization from '../../decorators/Authorization.decorator';
 import { User } from '../../entities/User.entity';
-import AuthGuard from '../../guards/AuthGuard.guard';
 import { CredentialsDto } from '../../pipes/validation/CredentialsDto.dto';
 import { AuthService } from './Auth.service';
-import { TokenPayload, TokenType } from './Jwt/Jwt.interface';
+import { TokenType } from './Jwt/Jwt.interface';
 import { JwtService } from './Jwt/Jwt.service';
 
 /**
@@ -66,19 +56,5 @@ export class AuthController {
     } catch (exception) {
       throw exception;
     }
-  }
-
-  /**
-   * Route to logout an user and blacklist the JWT
-   *
-   * @param payload payload of user jwt
-   *
-   * @returns Promise<void>
-   */
-
-  @Get('logout')
-  @UseGuards(AuthGuard)
-  async logout(@Authorization() payload: TokenPayload): Promise<void> {
-    await this.authService.handleLogout(payload);
   }
 }

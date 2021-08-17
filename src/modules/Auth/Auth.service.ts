@@ -1,13 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BlacklistToken } from '../../entities/BlacklistToken.entity';
 import { User } from '../../entities/User.entity';
 import { CredentialsDto } from '../../pipes/validation/CredentialsDto.dto';
 import { TokenPayload } from './Jwt/Jwt.interface';
@@ -18,8 +11,6 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(BlacklistToken)
-    private blacklistRepository: Repository<BlacklistToken>,
     private jwtService: JwtService
   ) {}
 
@@ -36,7 +27,7 @@ export class AuthService {
     if (!payload) return false;
     const exists: boolean = !!(await this.userRepository.findOne({ uuid: payload.user }));
     if (!exists) return false;
-    return !(await this.jwtService.isTokenBanned(payload.uuid));
+    return exists;
   }
 
   /**
@@ -58,30 +49,6 @@ export class AuthService {
   }
 
   /**
-   * Function to logout an user
-   *
-   * Important: The token gets banned until it's expired
-   *
-   * @param token jwt to be blacklisted
-   *
-   * @returns Promise<HandleService<void>>
-   */
-
-  async handleLogout(payload: TokenPayload): Promise<void> {
-    const { uuid, exp } = payload;
-    const user: User | undefined = await this.userRepository.findOne({
-      uuid: payload.user,
-    });
-    if (!user) throw new NotFoundException('User Not Found');
-    const banned: boolean = await this.jwtService.isTokenBanned(uuid);
-    if (banned) throw new UnauthorizedException('Token Is Banned');
-    const blacklistToken: BlacklistToken = new BlacklistToken();
-    blacklistToken.uuid = uuid;
-    blacklistToken.expires = new Date(exp * 1000);
-    await this.blacklistRepository.save(blacklistToken);
-  }
-
-  /**
    * Function to handle a connect
    *
    * @param token user jwt
@@ -94,8 +61,6 @@ export class AuthService {
   async handleConnect(token: string, update: boolean = true): Promise<User> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
-    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-    if (banned) throw new UnauthorizedException('Token Is Banned');
 
     const user: User | undefined = await this.userRepository
       .createQueryBuilder('user')
@@ -125,8 +90,6 @@ export class AuthService {
   async handleDisconnect(token: string, update: boolean = true): Promise<User> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
-    const banned: boolean = await this.jwtService.isTokenBanned(payload.uuid);
-    if (banned) throw new UnauthorizedException('Token Is Banned');
 
     const user: User | undefined = await this.userRepository
       .createQueryBuilder('user')
@@ -142,19 +105,5 @@ export class AuthService {
       await this.userRepository.save(user);
     }
     return user;
-  }
-
-  /**
-   * Cron task firing every day at 00:00.00 to delete expired blacklisted tokens
-   *
-   * @returns Promise<void>
-   */
-
-  @Cron('0 0 0 * * 1-7')
-  async handleCron(): Promise<void> {
-    const tokens: Array<BlacklistToken> = await this.blacklistRepository.find();
-    tokens.forEach(async (token: BlacklistToken) => {
-      if (new Date(token.expires) < new Date()) await this.blacklistRepository.remove(token);
-    });
   }
 }

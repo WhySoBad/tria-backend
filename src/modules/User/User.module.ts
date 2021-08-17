@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BlacklistToken } from '../../entities/BlacklistToken.entity';
 import { PendingUser } from '../../entities/PendingUser.entity';
 import { User } from '../../entities/User.entity';
 import { AuthModule } from '../Auth/Auth.module';
@@ -11,7 +10,7 @@ import { UserGateway } from './User.gateway';
 import { UserService } from './User.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, PendingUser, BlacklistToken]), AuthModule, ChatModule],
+  imports: [TypeOrmModule.forFeature([User, PendingUser]), AuthModule, ChatModule],
   controllers: [UserController],
   providers: [UserService, AuthService, UserGateway],
   exports: [UserService],
