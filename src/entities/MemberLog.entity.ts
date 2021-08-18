@@ -3,7 +3,7 @@ import { Chat } from './Chat.entity';
 import { User } from './User.entity';
 
 @Entity()
-@Index(['userUuid', 'chatUuid'], { unique: true })
+@Index(['userUuid', 'chatUuid', 'joined'], { unique: true })
 export class MemberLog {
   @Column({ type: 'uuid', primary: true, unique: false }) userUuid: string;
 

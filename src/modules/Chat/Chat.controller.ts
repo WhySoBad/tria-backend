@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -33,7 +34,6 @@ import { User } from '../../entities/User.entity';
 import AuthGuard from '../../guards/AuthGuard.guard';
 import { BanMemberDto } from '../../pipes/validation/BanMemberDto.dto';
 import { GroupChatDto } from '../../pipes/validation/GroupChatDto.dto';
-import { GroupTagDto } from '../../pipes/validation/GroupTagDto.dto';
 import { KickMemberDto } from '../../pipes/validation/KickMemberDto.dto';
 import { PrivateChatDto } from '../../pipes/validation/PrivateChatDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
@@ -134,14 +134,14 @@ export class ChatController {
   /**
    * Route to check whether a given tag exists
    *
-   * @param body request body
+   * @param tag tag to be checked
    *
    * @returns Promise<boolean>
    */
 
-  @Post('check/tag')
-  async verifyTag(@Body() body: GroupTagDto): Promise<boolean> {
-    return await this.chatService.handleTagVerify(body.tag);
+  @Get('check/tag/:tag')
+  async verifyTag(@Param('tag') tag: string): Promise<boolean> {
+    return await this.chatService.handleTagVerify(tag);
   }
 
   /**
@@ -154,7 +154,7 @@ export class ChatController {
    * @returns Promise<void>
    */
 
-  @Get(':uuid/join')
+  @Post(':uuid/join')
   @UseGuards(AuthGuard)
   async join(
     @Authorization() payload: TokenPayload,
@@ -177,7 +177,7 @@ export class ChatController {
    * @returns Promise<void>
    */
 
-  @Get(':uuid/leave')
+  @Post(':uuid/leave')
   @Roles(GroupRole.MEMBER)
   async leave(
     @Authorization() payload: TokenPayload,
@@ -200,7 +200,7 @@ export class ChatController {
    * @returns Promise<void>
    */
 
-  @Get(':uuid/delete')
+  @Delete(':uuid/delete')
   @UseGuards(AuthGuard)
   async delete(
     @Authorization() payload: TokenPayload,
@@ -420,6 +420,7 @@ export class ChatController {
    *
    * @returns Promise<any>
    */
+
   @Get(':uuid')
   @Roles(GroupRole.MEMBER)
   async get(
@@ -554,7 +555,7 @@ export class ChatController {
    * @returns Promise<void>
    */
 
-  @Get(':uuid/avatar/delete')
+  @Delete(':uuid/avatar/delete')
   @Permissions(Permission.CHAT_EDIT)
   async deleteAvatar(
     @Param('uuid', new ParseUUIDPipe()) uuid: string,

@@ -2,11 +2,13 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Res,
   UploadedFile,
   UseGuards,
@@ -26,12 +28,8 @@ import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
 import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
 import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
 import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
-import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
 import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
-import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
-import { UserMailDto } from '../../pipes/validation/UserMailDto.dto';
-import { UserTagDto } from '../../pipes/validation/UserTagDto.dto';
 import { TokenPayload } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
 import { UserPreview } from './User.interface';
@@ -99,15 +97,15 @@ export class UserController {
   /**
    * Route to validate a registration token
    *
-   * @param body request body
+   * @param token registration token
    *
    * @returns Promise<boolean>
    */
 
-  @Post('register/validate')
-  async validate(@Body() body: RegisterValidateDto): Promise<boolean> {
+  @Get('register/validate/:token')
+  async validate(@Param('token') token: string): Promise<boolean> {
     try {
-      return await this.userService.handleValidate(body);
+      return await this.userService.handleValidate(token);
     } catch (exception) {
       throw exception;
     }
@@ -133,27 +131,27 @@ export class UserController {
   /**
    * Route to check whether a given tag exists
    *
-   * @param body request body
+   * @param tag tag to be checked
    *
    * @returns Promise<boolean>
    */
 
-  @Post('check/tag')
-  async checkTag(@Body() body: UserTagDto): Promise<boolean> {
-    return await this.userService.handleTagVerify(body.tag);
+  @Get('check/tag/:tag')
+  async checkTag(@Param('tag') tag: string): Promise<boolean> {
+    return await this.userService.handleTagVerify(tag);
   }
 
   /**
    * Route to check whether a given mail address exists
    *
-   * @param body request body
+   * @param mail mail address to be checked
    *
    * @returns Promise<boolean>
    */
 
-  @Post('check/mail')
-  async checkMail(@Body() body: UserMailDto): Promise<boolean> {
-    return await this.userService.handleMailVerify(body.mail);
+  @Get('check/mail/:mail')
+  async checkMail(@Param('mail') mail: string): Promise<boolean> {
+    return await this.userService.handleMailVerify(mail);
   }
 
   /**
@@ -166,7 +164,7 @@ export class UserController {
    * @returns Promise<void>
    */
 
-  @Post('edit')
+  @Put('edit')
   @UseGuards(AuthGuard)
   async edit(@Body() user: EditUserDto, @Authorization() payload: TokenPayload): Promise<void> {
     try {
@@ -186,7 +184,7 @@ export class UserController {
    * @returns Promise<void>
    */
 
-  @Post('password/change')
+  @Put('password/change')
   @UseGuards(AuthGuard)
   async passwordChange(
     @Body() body: PasswordChangeDto,
@@ -219,14 +217,14 @@ export class UserController {
   /**
    * Route to validate a password reset token
    *
-   * @param body request body
+   * @param token reset token to be validated
    *
    * @returns Promise<boolean>
    */
 
-  @Post('password/reset/validate')
-  async passwordResetValidate(@Body() body: PasswordResetValidateDto): Promise<boolean> {
-    return await this.userService.handlePasswordResetValidate(body);
+  @Get('password/reset/validate/:token')
+  async passwordResetValidate(@Param('token') token: string): Promise<boolean> {
+    return await this.userService.handlePasswordResetValidate(token);
   }
 
   /**
@@ -254,7 +252,7 @@ export class UserController {
    * @returns Promise<void>
    */
 
-  @Get('delete')
+  @Delete('delete')
   @UseGuards(AuthGuard)
   async delete(@Authorization() payload: TokenPayload): Promise<void> {
     try {
@@ -382,7 +380,7 @@ export class UserController {
    * @returns Promise<void>
    */
 
-  @Get('avatar/delete')
+  @Delete('avatar/delete')
   @UseGuards(AuthGuard)
   async deleteAvatar(@Authorization() payload: TokenPayload): Promise<void> {
     try {

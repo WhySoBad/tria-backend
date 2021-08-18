@@ -19,9 +19,7 @@ import { EditUserDto } from '../../pipes/validation/EditUserDto.dto';
 import { PasswordChangeDto } from '../../pipes/validation/PasswordChangeDto.dto';
 import { PasswordResetConfirmDto } from '../../pipes/validation/PasswordResetConfirmDto.dto';
 import { PasswordResetDto } from '../../pipes/validation/PasswordResetDto.dto';
-import { PasswordResetValidateDto } from '../../pipes/validation/PasswordResetValidateDto.dto';
 import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
-import { RegisterValidateDto } from '../../pipes/validation/RegisterValidateDto.dto';
 import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
 import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
@@ -95,16 +93,13 @@ export class UserService {
   /**
    * Function to validate a registration token
    *
-   * @param data body containing the token
+   * @param token registration token
    *
    * @returns Promise<boolean>
    */
 
-  async handleValidate(data: RegisterValidateDto): Promise<boolean> {
-    const payload: TokenPayload | undefined = JwtService.DecodeToken(
-      data.token,
-      TokenType.REGISTER
-    );
+  async handleValidate(token: string): Promise<boolean> {
+    const payload: TokenPayload | undefined = JwtService.DecodeToken(token, TokenType.REGISTER);
     if (!payload) return false;
     else return true;
   }
@@ -286,14 +281,14 @@ export class UserService {
   /**
    * Function to validate a password reset token
    *
-   * @param data body containing the reset token
+   * @param token reset token
    *
    * @returns Promise<boolean>
    */
 
-  async handlePasswordResetValidate(data: PasswordResetValidateDto): Promise<boolean> {
+  async handlePasswordResetValidate(token: string): Promise<boolean> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(
-      data.token,
+      token,
       TokenType.PASSWORD_RESET
     );
     if (!payload) return false;
