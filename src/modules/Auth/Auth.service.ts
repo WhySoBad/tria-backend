@@ -59,22 +59,16 @@ export class AuthService {
    */
 
   async handleConnect(token: string, update: boolean = true): Promise<User> {
-    const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
-    if (!payload) throw new BadRequestException('Invalid Token');
-
-    const user: User | undefined = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.uuid = :uuid', { uuid: payload.user })
-      .leftJoinAndSelect('user.chats', 'member')
-      .leftJoinAndSelect('member.chat', 'chat')
-      .leftJoinAndSelect('chat.members', 'members')
-      .getOne();
-    if (!user) throw new NotFoundException('User Not Found');
-    if (update) {
-      user.online = true;
-      await this.userRepository.save(user);
+    try {
+      const user: User = await this.getUser(token);
+      if (update) {
+        user.online = true;
+        await this.userRepository.save(user);
+      }
+      return user;
+    } catch (exception) {
+      throw exception;
     }
-    return user;
   }
 
   /**
@@ -88,6 +82,28 @@ export class AuthService {
    */
 
   async handleDisconnect(token: string, update: boolean = true): Promise<User> {
+    try {
+      const user: User = await this.getUser(token);
+      if (update) {
+        user.online = false;
+        user.lastSeen = new Date();
+        await this.userRepository.save(user);
+      }
+      return user;
+    } catch (exception) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Function to get an user by its auth token
+   *
+   * @param token auth token
+   *
+   * @returns Promise<User>
+   */
+
+  async getUser(token: string): Promise<User> {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) throw new BadRequestException('Invalid Token');
 
@@ -99,11 +115,7 @@ export class AuthService {
       .leftJoinAndSelect('chat.members', 'members')
       .getOne();
     if (!user) throw new NotFoundException('User Not Found');
-    if (update) {
-      user.online = false;
-      user.lastSeen = new Date();
-      await this.userRepository.save(user);
-    }
+
     return user;
   }
 }

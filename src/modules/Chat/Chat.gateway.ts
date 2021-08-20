@@ -55,8 +55,7 @@ import { ChatService } from './Chat.service';
 export class ChatGateway {
   constructor(
     @InjectRepository(Chat) private chatRepository: Repository<Chat>,
-    @Inject(forwardRef(() => ChatService)) private chatService: ChatService,
-    private jwtService: JwtService
+    @Inject(forwardRef(() => ChatService)) private chatService: ChatService
   ) {}
 
   @WebSocketServer() server: Server;

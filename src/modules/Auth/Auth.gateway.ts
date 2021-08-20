@@ -39,27 +39,26 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns Promise<void>
    */
 
-  private logger: Logger = new Logger('AppGateway');
+  private logger: Logger = new Logger('GlobalGateway');
 
   async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');
     if (!token) client.error(new BadRequestException('Missing Token').getResponse());
-    if ((await this.timesOnline(token)) > 1) {
-      client.error(new BadRequestException('User Is Already Online').getResponse());
-      client.disconnect(true);
-    } else {
-      try {
-        const user: User = await this.authService.handleConnect(token);
-        await new Promise((resolve) => {
-          user.chats.forEach(({ chatUuid }) => {
-            client.join(chatUuid, resolve);
-          });
+
+    try {
+      const user: User = await this.authService.handleConnect(token);
+      await new Promise((resolve) => {
+        user.chats.forEach(({ chatUuid }) => {
+          client.join(chatUuid, resolve);
         });
+      });
+      const timesOnline: number = this.timesOnline(token);
+      if (timesOnline === 1) {
         await this.emitToAllContacts(user, ChatEvent.MEMBER_ONLINE);
-        this.logger.log(`User connected [${user.uuid}, ${client.id}]`);
-      } catch (exception) {
-        if (exception instanceof HttpException) client.error(exception.getResponse());
       }
+      this.log(client, user, true);
+    } catch (exception) {
+      if (exception instanceof HttpException) client.error(exception.getResponse());
     }
   }
 
@@ -74,11 +73,20 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');
     if (!token) return client.error(new BadRequestException('Missing Token').getResponse());
-    if ((await this.timesOnline(token)) === 0) {
+    const timesOnline: number = this.timesOnline(token);
+
+    if (timesOnline === 0) {
       try {
         const user: User = await this.authService.handleDisconnect(token);
         await this.emitToAllContacts(user, ChatEvent.MEMBER_OFFLINE);
-        this.logger.log(`User disconnected [${user.uuid}, ${client.id}]`);
+        this.log(client, user, false);
+      } catch (exception) {
+        if (exception instanceof HttpException) client.error(exception.getResponse());
+      }
+    } else {
+      try {
+        const user: User = await this.authService.getUser(token);
+        this.log(client, user, false);
       } catch (exception) {
         if (exception instanceof HttpException) client.error(exception.getResponse());
       }
@@ -127,7 +135,7 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns Promise<number>
    */
 
-  private async timesOnline(token: string): Promise<number> {
+  private timesOnline(token: string): number {
     const payload: TokenPayload | undefined = JwtService.DecodeToken(token);
     if (!payload) return 0;
 
@@ -144,21 +152,27 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return online;
   }
 
-  /**
-   * Function to parse the cookies of an incoming request
-   *
-   * @param cookies cookies string
-   *
-   * @returns object
-   */
+  private log(client: Socket, user: User, connected: boolean): void {
+    const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');
+    const timesOnline: number = this.timesOnline(token);
+    const ip: string = client.handshake.address;
+    const object: object = {
+      ip: ip,
+      user: user.uuid,
+      id: client.id,
+      instance: timesOnline,
+    };
 
-  private parseCookies: (cookies: string) => { [name: string]: string } = (cookies: string) => {
-    const split: Array<string> = cookies?.split('; ') || [];
-    const parsed: { [name: string]: string } = {};
-    split.forEach((cookie: string) => {
-      const split: Array<string> = cookie.split('=');
-      parsed[split[0]] = split[1];
-    });
-    return parsed;
-  };
+    const getObjectString = (): string => {
+      return `{ ${Object.entries(object)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ')} }`;
+    };
+
+    const message: string = `Websocket ${
+      connected ? 'connected' : 'disconnected'
+    } ${getObjectString()}`;
+
+    this.logger.log(message);
+  }
 }
