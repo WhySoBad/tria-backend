@@ -292,7 +292,7 @@ export class ChatController {
   }
 
   /**
-   * Get a preview of the chat without being logged in
+   * Get a preview of a group without being logged in
    *
    * @param request request instance
    *
@@ -308,6 +308,8 @@ export class ChatController {
       if (!chat) throw new NotFoundException('Chat Not Found');
       if (chat.type === ChatType.PRIVATE_GROUP) {
         throw new BadRequestException("Can't Get Preview Of Private Group");
+      } else if (chat.type === ChatType.PRIVATE) {
+        throw new BadRequestException("Can't Get Preview Of Private Chat");
       }
       return {
         uuid: chat.uuid,
