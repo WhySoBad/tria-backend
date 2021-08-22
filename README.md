@@ -1,7 +1,10 @@
-# backend - messenger-matura
+![backend_banner](https://user-images.githubusercontent.com/49595640/130368274-f91f047e-635f-44c7-ac6d-36e2559ad043.png)
+# Backend
+
 ## API
 
 ### Validate Auth Token
+
 > Endpoint to validate an user auth token
 
 > Authorization header required
@@ -10,7 +13,8 @@
 GET /auth/validate
 ```
 
-#### Response 
+#### Response
+
 Boolean whether the token is valid or not
 
 #### Errors
@@ -20,6 +24,7 @@ Boolean whether the token is valid or not
 ```
 
 ### Login
+
 > Endpoint to log an user in using its credentials
 
 ```http
@@ -35,10 +40,11 @@ POST /auth/login
 }
 ```
 
-#### Response 
+#### Response
+
 User auth token as string
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
@@ -49,6 +55,7 @@ User auth token as string
 ```
 
 ### Create Private Chat
+
 > Endpoint to create a new private chat with another user
 
 > Authorization header required
@@ -65,10 +72,11 @@ POST /chat/create/private
 }
 ```
 
-#### Response 
+#### Response
+
 Chat uuid as string
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
@@ -83,6 +91,7 @@ Chat uuid as string
 ```
 
 ### Create Group Chat
+
 > Endpoint to create a new group chat
 
 > Authorization header required
@@ -103,10 +112,11 @@ POST /chat/create/group
 }
 ```
 
-#### Response 
+#### Response
+
 Chat uuid as string
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
@@ -117,6 +127,7 @@ Chat uuid as string
 ```
 
 ### Check Group Tag
+
 > Endpoint to check whether a given group tag does already exist
 
 ```http
@@ -124,9 +135,11 @@ GET /chat/check/tag/[tag]
 ```
 
 #### Response
+
 Boolean whether the tag already exists or not
 
 ### Join Group
+
 > Endpoint to join an existing group
 
 > Authorization header required
@@ -135,10 +148,11 @@ Boolean whether the tag already exists or not
 POST /chat/[uuid]/join
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Group Not Found
@@ -161,6 +175,7 @@ Void
 ```
 
 ### Leave Group
+
 > Endpoint to leave an existing group
 
 > Authorization header required
@@ -169,10 +184,11 @@ Void
 POST /chat/[uuid]/leave
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Group Not Found
@@ -191,6 +207,7 @@ Void
 ```
 
 ### Delete Chat
+
 > Endpoint to delete an existing chat
 
 > Authorization header required
@@ -199,10 +216,11 @@ Void
 DELETE /chat/[uuid]/delete
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
@@ -217,6 +235,7 @@ Void
 ```
 
 ### Ban Group Member
+
 > Endpoint to ban a member in a group
 
 > Admin role with ban permission or owner role required
@@ -235,10 +254,11 @@ POST /chat/[uuid]/admin/ban
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
@@ -261,6 +281,7 @@ Void
 ```
 
 ### Unban Group Member
+
 > Endpoint to unban a banned member in a group
 
 > Admin role with unban permission or owner role required
@@ -279,10 +300,11 @@ POST /chat/[uuid]/admin/unban
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
@@ -301,6 +323,7 @@ Void
 ```
 
 ### Kick Group Member
+
 > Endpoint to kick a member in a group
 
 > Admin role with kick permission or owner role required
@@ -319,10 +342,11 @@ POST /chat/[uuid]/admin/kick
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
@@ -341,13 +365,15 @@ Void
 ```
 
 ### Get Group Preview
-> Endpoint to get a preview of a chat 
+
+> Endpoint to get a preview of a chat
 
 ```http
 GET /chat/[uuid]/preview
 ```
 
-#### Response 
+#### Response
+
 ```typescript
 {
   uuid: string,
@@ -361,7 +387,7 @@ GET /chat/[uuid]/preview
 }
 ```
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
@@ -376,7 +402,8 @@ GET /chat/[uuid]/preview
 ```
 
 ### Get Chat Messages
-> Endpoint to get a specific amount of messages older than a given timestamp 
+
+> Endpoint to get a specific amount of messages older than a given timestamp
 
 > User has to be a member of the chat
 
@@ -386,7 +413,8 @@ GET /chat/[uuid]/preview
 GET /chat/[uuid]/messages/get/[timestamp]/[amount]
 ```
 
-#### Response 
+#### Response
+
 ```typescript
 {
   messages: Array<{
@@ -409,13 +437,14 @@ GET /chat/[uuid]/messages/get/[timestamp]/[amount]
 }
 ```
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
 ```
 
 ### Read Chat Messages
+
 > Endpoint to mark messages after a given timestamp as read
 
 > User has to be a member of the chat
@@ -426,10 +455,11 @@ GET /chat/[uuid]/messages/get/[timestamp]/[amount]
 GET /chat/[uuid]/messages/read/[timestamp]
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 400 Timestamp Can't Be In The Future
@@ -444,6 +474,7 @@ Void
 ```
 
 ### Get Chat
+
 > Endpoint to get all informations about a chat
 
 > User has to be a member of the chat
@@ -454,7 +485,8 @@ Void
 GET /chat/[uuid]
 ```
 
-#### Response 
+#### Response
+
 ```typescript
 {
   uuid: string,
@@ -511,29 +543,32 @@ GET /chat/[uuid]
 }
 ```
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
 ```
 
 ### Get Group Avatar
+
 > Endpoint to get the avatar of a group
 
 ```http
 GET /chat/[uuid]/avatar
 ```
 
-#### Response 
+#### Response
+
 The avatar of the chat as a .jpeg file
 
-#### Errors 
+#### Errors
 
 ```http
 404 Avatar Not Found
 ```
 
 ### Upload Group Avatar
+
 > Endpoint to upload an avatar for a group
 
 > Admin role with chat edit permission or owner role required
@@ -544,13 +579,15 @@ The avatar of the chat as a .jpeg file
 POST /chat/[uuid]/avatar/upload
 ```
 
-#### Body 
+#### Body
+
 FormData with the name "avatar" and an avatar image in the .jpeg format
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 400 Maximum File Size Is 100'000 Bytes
@@ -569,6 +606,7 @@ Void
 ```
 
 ### Delete Group Avatar
+
 > Endpoint to delete an avatar of a group
 
 > Admin role with chat edit permission or owner role required
@@ -579,10 +617,11 @@ Void
 DELETE /chat/[uuid]/avatar/delete
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Chat Not Found
@@ -601,6 +640,7 @@ Void
 ```
 
 ### Search Groups and User
+
 > Endpoint to search new groups and user
 
 > Authorization header required
@@ -609,9 +649,9 @@ Void
 POST /search
 ```
 
-#### Body 
+#### Body
 
-```typescript 
+```typescript
 {
   text: string,
   checkUser?: boolean,
@@ -622,23 +662,26 @@ POST /search
 }
 ```
 
-#### Response 
+#### Response
+
 Array with UserPreview and ChatPreview objects
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
 ```
 
 ### Register New User
-> Endpoint to register a new user 
+
+> Endpoint to register a new user
 
 ```http
 POST /user/register
 ```
 
-#### Body 
+#### Body
+
 ```typescript
 {
   mail: string,
@@ -647,6 +690,7 @@ POST /user/register
 ```
 
 #### Response
+
 Void
 
 #### Errors
@@ -656,23 +700,27 @@ Void
 ```
 
 ### Validate Register Token
-> Endpoint to validate whether a register token is valid or not 
+
+> Endpoint to validate whether a register token is valid or not
 
 ```http
 GET /user/register/validate/[token]
 ```
 
 #### Response
+
 Boolean whether the token is valid or not
 
 ### Finish User Registration
+
 > Endpoint to finish the registration of an user
 
 ```http
 POST /user/register/verify
 ```
 
-#### Body 
+#### Body
+
 ```typescript
 {
   token: string,
@@ -683,10 +731,11 @@ POST /user/register/verify
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 400 Invalid Registration Token
@@ -701,26 +750,31 @@ Void
 ```
 
 ### Check User Tag
-> Endpoint to check whether a tag does already exist 
+
+> Endpoint to check whether a tag does already exist
 
 ```http
 GET /user/check/tag/[tag]
 ```
 
 #### Response
+
 Boolean whether the tag does already exist or not
 
 ### Check User Mail
-> Endpoint to check whether a mail is already used 
+
+> Endpoint to check whether a mail is already used
 
 ```http
 GET /user/check/mail/[mail]
 ```
 
 #### Response
+
 Boolean whether the mail is already used or not
 
 ### Edit User
+
 > Endpoint to edit an user
 
 > Authorization header required
@@ -729,7 +783,8 @@ Boolean whether the mail is already used or not
 PUT /user/edit
 ```
 
-#### Body 
+#### Body
+
 ```typescript
 {
   name?: string,
@@ -739,10 +794,11 @@ PUT /user/edit
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
@@ -753,6 +809,7 @@ Void
 ```
 
 ### Change Password
+
 > Endpoint to change the password using the old password
 
 > Authorization header required
@@ -761,7 +818,8 @@ Void
 PUT /user/password/change
 ```
 
-#### Body 
+#### Body
+
 ```typescript
 {
   old: string,
@@ -769,10 +827,11 @@ PUT /user/password/change
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
@@ -783,23 +842,26 @@ Void
 ```
 
 ### Request Password Reset
+
 > Endpoint to request a mail to reset the password
 
 ```http
 POST /user/password/reset
 ```
 
-#### Body 
+#### Body
+
 ```typescript
 {
   mail: string,
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 Mail Not Found
@@ -810,23 +872,27 @@ Void
 ```
 
 ### Validate Password Reset Token
+
 > Endpoint to validate whether a password reset token is valid
 
 ```http
 GET /user/password/reset/validate/[token]
 ```
 
-#### Response 
+#### Response
+
 Boolean whether a password reset token is valid or not
 
 ### Confirm Password Reset
+
 > Endpoint to confirm a password reset and to set a new password
 
 ```http
 POST /user/password/reset/confirm
 ```
 
-#### Body 
+#### Body
+
 ```typescript
 {
   token: string,
@@ -834,10 +900,11 @@ POST /user/password/reset/confirm
 }
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 400 Invalid Reset Token
@@ -848,6 +915,7 @@ Void
 ```
 
 ### Delete User
+
 > Endpoint to delete an user
 
 > Authorization header required
@@ -856,16 +924,18 @@ Void
 DELETE /user/delete
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
 ```
 
 ### Get User Information
+
 > Endpoint to get all information about an user
 
 > Authorization header required
@@ -874,7 +944,8 @@ Void
 GET /user/current
 ```
 
-#### Response 
+#### Response
+
 ```typescript
 {
   uuid: string,
@@ -891,20 +962,22 @@ GET /user/current
 }
 ```
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
 ```
 
 ### Get User Preview
+
 > Endpoint to get a preview of an user
 
 ```http
 GET /user/[uuid]
 ```
 
-#### Response 
+#### Response
+
 ```typescript
 {
   uuid: string,
@@ -915,29 +988,32 @@ GET /user/[uuid]
 }
 ```
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
 ```
 
 ### Get User Avatar
+
 > Endpoint to get the avatar of an user
 
 ```http
 GET /user/[uuid]/avatar
 ```
 
-#### Response 
+#### Response
+
 The avatar of the chat as a .jpeg file
 
-#### Errors 
+#### Errors
 
 ```http
 404 Avatar Not Found
 ```
 
 ### Upload User Avatar
+
 > Endpoint to upload an avatar for an user
 
 > Authorization header required
@@ -946,13 +1022,15 @@ The avatar of the chat as a .jpeg file
 POST /user/avatar/upload
 ```
 
-#### Body 
+#### Body
+
 FormData with the name "avatar" and an avatar image in the .jpeg format
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 400 Maximum File Size Is 100'000 Bytes
@@ -971,6 +1049,7 @@ Void
 ```
 
 ### Delete User Avatar
+
 > Endpoint to delete an avatar of an user
 
 > Authorization header required
@@ -979,10 +1058,11 @@ Void
 DELETE /user/avatar/delete
 ```
 
-#### Response 
+#### Response
+
 Void
 
-#### Errors 
+#### Errors
 
 ```http
 404 User Not Found
