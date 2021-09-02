@@ -431,6 +431,14 @@ export class ChatGateway {
     });
   }
 
+  /**
+   * Handler to emit websockets to all online members of a new group chat
+   *
+   * @param chat new created chat
+   *
+   * @returns Promise<void>
+   */
+
   async handleGroupCreate(chat: Chat): Promise<void> {
     await Promise.all(
       chat.members.map(async (member: ChatMember) => {
@@ -513,6 +521,29 @@ export class ChatGateway {
         };
       }),
     });
+  }
+
+  /**
+   * Function to emit to an user when a message was
+   *
+   * successfully read
+   *
+   * @param userUuid uuid of the user who read the message
+   *
+   * @param chatUuid uuid of the chat in which the messages were read
+   *
+   * @param timestamp timestamp of the last read message
+   *
+   * @returns Promise<void>
+   */
+
+  async handleMessageRead(userUuid: string, chatUuid: string, timestamp: Date): Promise<void> {
+    try {
+      const client: Socket | undefined = await this.getSocketForUser(userUuid);
+      if (!client) throw new NotFoundException('User Not Found');
+      if (client)
+        client.emit(ChatEvent.MESSAGE_READ, { chat: chatUuid, timestamp: timestamp.getTime() });
+    } catch (exception) {}
   }
 
   /**

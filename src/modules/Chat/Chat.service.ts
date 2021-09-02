@@ -457,6 +457,7 @@ export class ChatService {
     }
     member.lastRead = new Date(timestamp + 1000);
     await this.chatMemberRepository.save(member);
+    await this.chatGateway.handleMessageRead(member.userUuid, member.chatUuid, member.lastRead);
   }
 
   /**

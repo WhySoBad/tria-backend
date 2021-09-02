@@ -182,7 +182,7 @@ export class SearchService {
           return found;
         }).length;
 
-      weight += contacts > 20 ? 8 : contacts * 0.4;
+      weight += contacts > 20 ? 8 : contacts * 0.4; //maximum of 8 points for shared contacts
 
       const online: number = weighted.online / weighted.size;
 
@@ -210,7 +210,7 @@ export class SearchService {
         .map(({ chatUuid }) => chatUuid.toLowerCase())
         .filter((uuid) => mappedChats.includes(uuid)).length;
 
-      weight += chats;
+      weight += chats > 10 ? 10 : chats; //maximum of 10 points for shared chats
       weight += getWeight(name, tag, uuid);
       weighted.weight = weight;
       return weighted;

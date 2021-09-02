@@ -78,16 +78,20 @@ export class UserService {
       TokenType.REGISTER
     );
 
-    await this.mailerService.sendMail({
-      to: user.mail,
-      subject: 'Account Registration',
-      from: config.noreplyMail,
-      template: 'registration',
-      text: `Thanks for registrating a new account. Paste the following url into your browser to finish the registration \n${config.website}/register/${token} \nIf you haven't registered any account you can ignore this email \nthe data will be deleted after seven days`,
-      context: {
-        href: `${config.website}/register/${token}`,
-      },
-    });
+    await this.mailerService
+      .sendMail({
+        to: user.mail,
+        subject: 'Tria Account Registration',
+        from: `Tria <${config.noreplyMail}>`,
+        template: 'registration',
+        text: `Thanks for registrating a new account. Paste the following url into your browser to finish the registration \n${config.website}/register/${token} \nIf you haven't registered any account you can ignore this email \nthe data will be deleted after seven days`,
+        context: {
+          href: `${config.website}/register/${token}`,
+        },
+      })
+      .catch(() => {
+        throw new ServiceUnavailableException('Failed To Send Mail');
+      });
   }
 
   /**
@@ -265,7 +269,7 @@ export class UserService {
     await this.mailerService
       .sendMail({
         to: data.mail,
-        from: config.noreplyMail,
+        from: `Tria <${config.noreplyMail}>`,
         subject: 'Password Reset',
         text: `You've successfully resetted your password! Paste the following url into your browser to set a new password \n${config.website}/register/${token} \nIf you haven't requested the password reset you can ignore this email \nthe data will be deleted after five days`,
         template: 'passwordreset',

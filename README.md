@@ -1,5 +1,43 @@
 ![backend_banner](https://user-images.githubusercontent.com/49595640/130368274-f91f047e-635f-44c7-ac6d-36e2559ad043.png)
+
 # Backend
+
+## Related Projects
+
+- [tria-frontend](https://github.com/WhySoBad/tria-frontend)
+- [tria-client](https://github.com/WhySoBad/tria-client)
+
+## Usage
+
+### Installation
+
+```cmd
+git clone https://github.com/WhySoBad/tria-backend.git
+```
+
+```cmd
+cd tria-backend
+```
+
+```cmd
+npm install
+```
+
+### Developer Mode
+
+```cmd
+npm run start:dev
+```
+
+API is available on [localhost at port 3000](http://localhost:3000)
+
+### Build
+
+```cmd
+npm run start
+```
+
+API is available on [localhost at port 3000](http://localhost:3000)
 
 ## API
 
@@ -1071,3 +1109,7 @@ Void
 ```http
 404 Avatar Not Found
 ```
+
+## License
+
+© [WhySoBad](https://github.com/WhySoBad)

@@ -4,6 +4,6 @@ export const config = {
   resetTokenExpires: '5d',
   avatarSize: 100000,
   avatarType: '.jpg',
-  noreplyMail: 'noreply@test.chat',
-  website: 'http://localhost:3000',
+  noreplyMail: 'noreply@tria.chat',
+  website: 'https://tria.chat',
 };

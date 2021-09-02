@@ -10,8 +10,7 @@ import { JwtService } from './Jwt/Jwt.service';
 export class AuthService {
   constructor(
     @InjectRepository(User)
-    private userRepository: Repository<User>,
-    private jwtService: JwtService
+    private userRepository: Repository<User>
   ) {}
 
   /**
