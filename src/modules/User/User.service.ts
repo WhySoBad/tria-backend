@@ -23,7 +23,7 @@ import { RegisterUserDto } from '../../pipes/validation/RegisterUserDto.dto';
 import { RegisterVerifyDto } from '../../pipes/validation/RegisterVerifyDto.dto';
 import { TokenPayload, TokenType } from '../Auth/Jwt/Jwt.interface';
 import { JwtService } from '../Auth/Jwt/Jwt.service';
-import { ChatType } from '../Chat/Chat.interface';
+import { ChatType, GroupRole } from '../Chat/Chat.interface';
 import { ChatService } from '../Chat/Chat.service';
 import { UserGateway } from './User.gateway';
 
@@ -334,7 +334,9 @@ export class UserService {
       await this.userGateway.handleUserDelete(user);
       user.chats.forEach(async (member: ChatMember) => {
         if (member.chat.type === ChatType.PRIVATE) await this.chatService.deleteChat(member.chat);
-        else await this.chatService.leaveChat(member.chat, member);
+        else if (member.role === GroupRole.OWNER && member.chat.members.length === 1) {
+          await this.chatService.deleteChat(member.chat);
+        } else await this.chatService.leaveChat(member.chat, member);
       });
       await this.userRepository.remove(user);
     } catch (exception) {
