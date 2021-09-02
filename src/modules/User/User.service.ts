@@ -328,14 +328,18 @@ export class UserService {
    */
 
   async handleDelete(payload: TokenPayload): Promise<void> {
-    const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
-    if (!user) throw new NotFoundException('User Not Found');
-    await this.userGateway.handleUserDelete(user);
-    user.chats.forEach(async (member: ChatMember) => {
-      if (member.chat.type === ChatType.PRIVATE) await this.chatService.deleteChat(member.chat);
-      else await this.chatService.leaveChat(member.chat, member);
-    });
-    await this.userRepository.remove(user);
+    try {
+      const user: User = await this.handleGet(payload.user);
+      if (!user) throw new NotFoundException('User Not Found');
+      await this.userGateway.handleUserDelete(user);
+      user.chats.forEach(async (member: ChatMember) => {
+        if (member.chat.type === ChatType.PRIVATE) await this.chatService.deleteChat(member.chat);
+        else await this.chatService.leaveChat(member.chat, member);
+      });
+      await this.userRepository.remove(user);
+    } catch (exception) {
+      throw exception;
+    }
   }
 
   /**
