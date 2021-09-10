@@ -1112,4 +1112,4 @@ Void
 
 ## License
 
-© [WhySoBad](https://github.com/WhySoBad)
+AGPL © [WhySoBad](https://github.com/WhySoBad)
