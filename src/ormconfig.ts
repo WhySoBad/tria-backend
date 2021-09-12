@@ -21,6 +21,9 @@ const config: TypeOrmModuleOptions = {
   cli: {
     migrationsDir: 'src/migration',
   },
+  extra: {
+    charset: 'utf8mb4_unicode_ci',
+  },
   timezone: 'Z',
 };
 
