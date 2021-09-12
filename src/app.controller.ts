@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { config } from './config';
 
-const startedAt: Date = new Date();
+const startedAt: number = Date.now();
 
 @Controller()
 export class AppController {
@@ -27,11 +27,7 @@ export class AppController {
       version: json.version,
       description: json.description,
       website: config.website,
-      onlineSince: `${addDigit(startedAt.getDate())}-${addDigit(
-        startedAt.getMonth() + 1
-      )}-${startedAt.getFullYear()} | ${addDigit(startedAt.getHours())}:${addDigit(
-        startedAt.getMinutes()
-      )}`,
+      onlineSince: startedAt,
     };
   }
 }

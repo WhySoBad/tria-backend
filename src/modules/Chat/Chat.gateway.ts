@@ -538,12 +538,10 @@ export class ChatGateway {
    */
 
   async handleMessageRead(userUuid: string, chatUuid: string, timestamp: Date): Promise<void> {
-    try {
-      const client: Socket | undefined = await this.getSocketForUser(userUuid);
-      if (!client) throw new NotFoundException('User Not Found');
-      if (client)
-        client.emit(ChatEvent.MESSAGE_READ, { chat: chatUuid, timestamp: timestamp.getTime() });
-    } catch (exception) {}
+    this.server
+      .of('/user')
+      .to(userUuid)
+      .emit(ChatEvent.MESSAGE_READ, { chat: chatUuid, timestamp: timestamp.getTime() });
   }
 
   /**
