@@ -5,12 +5,28 @@ import { ChatAdmin } from './ChatAdmin.entity';
 @Entity()
 @Index(['userUuid', 'chatUuid', 'permission'], { unique: true })
 export class AdminPermission {
+  /**
+   * Permission of the admin
+   */
+
   @PrimaryColumn('int')
   permission: Permission;
 
+  /**
+   * Uuid of the user
+   */
+
   @PrimaryColumn({ type: 'uuid', name: 'userUuid' }) userUuid: string;
 
+  /**
+   * Uuid of the chat
+   */
+
   @PrimaryColumn({ type: 'uuid', name: 'chatUuid' }) chatUuid: string;
+
+  /**
+   * Related admin
+   */
 
   @ManyToOne(() => ChatAdmin, (chatAdmin) => chatAdmin.permissions, {
     onDelete: 'CASCADE',
@@ -20,5 +36,5 @@ export class AdminPermission {
     { name: 'chatUuid', referencedColumnName: 'chatUuid' },
     { name: 'userUuid', referencedColumnName: 'userUuid' },
   ])
-  admins: Array<ChatAdmin>;
+  admin: Array<ChatAdmin>;
 }

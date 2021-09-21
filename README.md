@@ -462,7 +462,6 @@ GET /chat/[uuid]/messages/get/[timestamp]/[amount]
     createdAt: Date,
     editedAt: Date | null,
     edited: number,
-    pinned: boolean,
     text: string,
   }>,
   log: Array<{
@@ -558,7 +557,6 @@ GET /chat/[uuid]
     createdAt: Date,
     editedAt: Date | null,
     edited: number,
-    pinned: boolean,
     text: string,
   }>,
   banned: Array<{

@@ -28,22 +28,4 @@ const Authorization = createParamDecorator(
   }
 );
 
-/**
- * Function to parse the cookies of an incoming request
- *
- * @param cookies cookies string
- *
- * @returns object
- */
-
-const parseCookies: (cookies: string) => { [name: string]: string } = (cookies: string) => {
-  const split: Array<string> = cookies.split('; ');
-  const parsed: { [name: string]: string } = {};
-  split.forEach((cookie: string) => {
-    const split: Array<string> = cookie.split('=');
-    parsed[split[0]] = split[1];
-  });
-  return parsed;
-};
-
 export default Authorization;

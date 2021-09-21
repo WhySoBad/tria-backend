@@ -157,18 +157,18 @@ export class UserController {
   /**
    * Route to edit an user
    *
-   * @param user request body of type IUser
+   * @param body request body
    *
-   * @param payload payload of the user jwt
+   * @param payload payload of user jwt
    *
    * @returns Promise<void>
    */
 
   @Put('edit')
   @UseGuards(AuthGuard)
-  async edit(@Body() user: EditUserDto, @Authorization() payload: TokenPayload): Promise<void> {
+  async edit(@Body() body: EditUserDto, @Authorization() payload: TokenPayload): Promise<void> {
     try {
-      await this.userService.handleEdit(user, payload);
+      await this.userService.handleEdit(body, payload);
     } catch (exception) {
       throw exception;
     }
@@ -267,7 +267,7 @@ export class UserController {
    *
    * @param payload payload of the user jwt
    *
-   * @returns Promise<IUser>
+   * @returns Promise<any>
    */
 
   @Get('current')
@@ -299,7 +299,7 @@ export class UserController {
   /**
    * Route to get a preivew of an user by its uuid
    *
-   * @param uuid uuid of User
+   * @param uuid uuid of the user
    *
    * @returns Promise<UserPreview>
    */

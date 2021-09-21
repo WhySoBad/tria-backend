@@ -2,6 +2,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -37,6 +38,8 @@ export class UserService {
     private userGateway: UserGateway,
     private chatService: ChatService
   ) {}
+
+  private cronLogger: Logger = new Logger('Cron');
 
   /**
    * Function to register a new user
@@ -183,7 +186,7 @@ export class UserService {
   }
 
   /**
-   * Functoin to edit an user
+   * Function to edit an user
    *
    * @param data data to be changed
    *
@@ -207,9 +210,7 @@ export class UserService {
         .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
         .getOne();
 
-      if (tagExists || tagPending) {
-        throw new BadRequestException('Tag Has To Be Unique');
-      }
+      if (tagExists || tagPending) throw new BadRequestException('Tag Has To Be Unique');
     }
 
     if (data.tag) user.tag = data.tag;
@@ -313,9 +314,11 @@ export class UserService {
       TokenType.PASSWORD_RESET
     );
     if (!payload) throw new BadRequestException('Invalid Reset Token');
+
     const user: User | undefined = await this.userRepository.findOne({ uuid: payload.user });
     if (!user) throw new NotFoundException('User Not Found');
     user.password = await JwtService.Hash(data.password);
+
     this.userRepository.save(user);
   }
 
@@ -345,9 +348,7 @@ export class UserService {
   }
 
   /**
-   * Get a user
-   *
-   * When no uuid is provided the logged in user is returned
+   * Get a user by it's uuid
    *
    * @param uuid user uuid
    *
@@ -432,6 +433,7 @@ export class UserService {
 
   @Cron('0 0 0 * * 1-7')
   private async handleCron() {
+    this.cronLogger.log('Doing pending user cleanup');
     const users: Array<PendingUser> = await this.pendingUserRepository.find();
     users.forEach(async (user: PendingUser) => {
       if (new Date(user.expires) < new Date()) await this.pendingUserRepository.remove(user);

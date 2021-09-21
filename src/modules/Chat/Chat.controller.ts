@@ -149,7 +149,7 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param uuid uuid of Chat
+   * @param uuid uuid of the chat
    *
    * @returns Promise<void>
    */
@@ -172,7 +172,7 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param uuid uuid of Chat
+   * @param uuid uuid of the chat
    *
    * @returns Promise<void>
    */
@@ -195,7 +195,7 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param uuid uuid of Chat
+   * @param uuid uuid of the chat
    *
    * @returns Promise<void>
    */
@@ -216,11 +216,9 @@ export class ChatController {
   /**
    * Route to ban an user from a group
    *
-   * @param payload payload of user jwt
+   * @param uuid uuid of the chat
    *
-   * @param uuid uuid of Chat
-   *
-   * @param body uuid of User to be banned
+   * @param body uuid of the user to be banned
    *
    * @returns Promise<void>
    */
@@ -228,12 +226,11 @@ export class ChatController {
   @Post(':uuid/admin/ban')
   @Permissions(Permission.BAN)
   async ban(
-    @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
     @Body() body: BanMemberDto
   ): Promise<void> {
     try {
-      await this.chatService.handleBan(uuid, body.uuid, payload);
+      await this.chatService.handleBan(uuid, body.uuid);
     } catch (exception) {
       throw exception;
     }
@@ -242,11 +239,9 @@ export class ChatController {
   /**
    * Route to unban an user from a group
    *
-   * @param payload payload of user jwt
+   * @param uuid uuid of the chat
    *
-   * @param uuid uuid of Chat
-   *
-   * @param body uuid of User to be unbanned
+   * @param body uuid of the user to be unbanned
    *
    * @returns Promise<void>
    */
@@ -254,12 +249,11 @@ export class ChatController {
   @Post(':uuid/admin/unban')
   @Permissions(Permission.UNBAN)
   async unban(
-    @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
     @Body() body: BanMemberDto
   ): Promise<void> {
     try {
-      await this.chatService.handleUnban(uuid, body.uuid, payload);
+      await this.chatService.handleUnban(uuid, body.uuid);
     } catch (exception) {
       throw exception;
     }
@@ -268,11 +262,9 @@ export class ChatController {
   /**
    * Route to kick an user from a group
    *
-   * @param payload payload of user jwt
+   * @param uuid uuid of the chat
    *
-   * @param uuid uuid of Chat
-   *
-   * @param body uuid of User
+   * @param body body of the request
    *
    * @returns Promise<void>
    */
@@ -280,12 +272,11 @@ export class ChatController {
   @Post(':uuid/admin/kick')
   @Permissions(Permission.KICK)
   async kick(
-    @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
     @Body() body: KickMemberDto
   ): Promise<void> {
     try {
-      await this.chatService.handleKick(uuid, body.uuid, payload);
+      await this.chatService.handleKick(uuid, body.uuid);
     } catch (exception) {
       throw exception;
     }
@@ -296,7 +287,7 @@ export class ChatController {
    *
    * @param request request instance
    *
-   * @param uuid uuid of Chat
+   * @param uuid uuid of the chat
    *
    * @returns Promise<any>
    */
@@ -329,9 +320,7 @@ export class ChatController {
   /**
    * Route to get a specific amount of messages before a certain timestamp
    *
-   * @param payload payload of user jwt
-   *
-   * @param uuid uuid of Chat
+   * @param uuid uuid of the chat
    *
    * @param timestamp timestamp
    *
@@ -343,7 +332,6 @@ export class ChatController {
   @Get(':uuid/messages/get/:timestamp/:amount')
   @Roles(GroupRole.MEMBER)
   async getMessages(
-    @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string,
     @Param('timestamp', new ParseIntPipe()) timestamp: number,
     @Param('amount', new ParseIntPipe()) amount: number
@@ -361,7 +349,6 @@ export class ChatController {
             createdAt: message.createdAt,
             editedAt: message.editedAt,
             edited: message.edited,
-            pinned: message.pinned,
             text: message.text,
           };
         });
@@ -394,7 +381,7 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param uuid uuid of chat
+   * @param uuid uuid of the chat
    *
    * @param timestamp new timestamp
    */
@@ -418,7 +405,7 @@ export class ChatController {
    *
    * @param payload payload of user jwt
    *
-   * @param uuid uuid of Chat
+   * @param uuid uuid of the chat
    *
    * @returns Promise<any>
    */
@@ -434,7 +421,7 @@ export class ChatController {
       const user: ChatMember | undefined = chat.members.find(
         ({ userUuid }) => userUuid === payload.user
       );
-      const messages = await this.getMessages(payload, uuid, new Date().getTime(), 25);
+      const messages = await this.getMessages(uuid, new Date().getTime(), 25);
       const admins: Array<ChatAdmin> = chat.admins;
       return {
         uuid: chat.uuid,
@@ -525,8 +512,6 @@ export class ChatController {
    *
    * @param file uploaded file
    *
-   * @param payload payload of user jwt
-   *
    * @param uuid uuid of the group
    *
    * @returns Promise<void>
@@ -537,11 +522,10 @@ export class ChatController {
   @UseInterceptors(FileInterceptor('avatar', uploadConfig))
   async uploadAvatar(
     @UploadedFile() file: Express.Multer.File,
-    @Authorization() payload: TokenPayload,
     @Param('uuid', new ParseUUIDPipe()) uuid: string
   ): Promise<void> {
     try {
-      await this.chatService.handleAvatarUpload(file, payload, uuid);
+      await this.chatService.handleAvatarUpload(file, uuid);
     } catch (exception) {
       throw exception;
     }
@@ -552,7 +536,7 @@ export class ChatController {
    *
    * @param uuid uuid of the group
    *
-   * @param payload
+   * @param payload payload of user jwt
    *
    * @returns Promise<void>
    */

@@ -19,13 +19,52 @@ export enum Permission {
 }
 
 export interface ChatPreview {
+  /**
+   * Uuid of the chat
+   */
+
   uuid: string;
+
+  /**
+   * Type of the chat
+   */
+
   type: ChatType;
+
+  /**
+   * Name of the chat
+   */
+
   name: string | null;
+
+  /**
+   * Tag of the chat
+   */
+
   tag: string | null;
+
+  /**
+   * Description of the chat
+   */
+
   description: string | null;
+
+  /**
+   * Amount of members in the chat
+   */
+
   size: number;
+
+  /**
+   * Amount of online members in the chat
+   */
+
   online: number;
+
+  /**
+   * Avatar of the chat
+   */
+
   avatar: string | null;
 }
 

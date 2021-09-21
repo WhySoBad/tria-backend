@@ -1,17 +1,25 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class MessageEditDto {
+  /**
+   * Action uuid
+   */
+
   @IsOptional()
   @IsUUID(4)
   readonly actionUuid: string;
+
+  /**
+   * Message uuid
+   */
 
   @IsNotEmpty()
   @IsUUID(4)
   readonly message: string;
 
-  @IsOptional()
-  @IsBoolean()
-  readonly pinned: boolean;
+  /**
+   * Text of the message
+   */
 
   @IsOptional()
   @IsString()

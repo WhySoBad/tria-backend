@@ -18,11 +18,6 @@ export class AppController {
     const packageJson: Buffer = readFileSync(process.cwd() + '/package.json');
     const json: { [key: string]: any } = JSON.parse(packageJson.toString());
 
-    const addDigit = (value: number): string => {
-      if (value < 10) return '0' + value;
-      else return value.toString();
-    };
-
     return {
       version: json.version,
       description: json.description,

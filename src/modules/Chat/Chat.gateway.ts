@@ -85,7 +85,6 @@ export class ChatGateway {
         sender: message.userUuid,
         createdAt: message.createdAt,
         editedAt: message.editedAt,
-        pinned: message.pinned,
         text: message.text,
       });
       if (body.actionUuid) {
@@ -147,7 +146,6 @@ export class ChatGateway {
         chat: message.chatUuid,
         message: message.uuid,
         text: message.text,
-        pinned: message.pinned,
         edited: message.edited,
         editedAt: message.editedAt,
       });
@@ -502,7 +500,6 @@ export class ChatGateway {
           createdAt: message.createdAt,
           editedAt: message.editedAt,
           edited: message.edited,
-          pinned: message.pinned,
           text: message.text,
         };
       }),

@@ -7,7 +7,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   catch(exception: any, host: ArgumentsHost) {
     const context: HttpArgumentsHost = host.switchToHttp();
-
     const response: Response = context.getResponse<Response>();
 
     if (!(exception instanceof HttpException)) {
@@ -19,10 +18,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const exceptionResponse: any = exception.getResponse();
-    const error: string = exceptionResponse.error;
-    const statusCode: number = exceptionResponse.statusCode;
-    const message: string | Array<string> = exceptionResponse.message;
+    const exceptionResponse: any = exception?.getResponse();
+    const error: string = exceptionResponse?.error || 'Internal Server Error';
+    const statusCode: number = exceptionResponse?.statusCode || 500;
+    const message: string | Array<string> = exceptionResponse?.message || 'Unknown Error';
 
     const final: string = capitalizeMessage(Array.isArray(message) ? message.join(', ') : message);
     response.status(statusCode).json({ statusCode: statusCode, message: final, error: error });
@@ -37,6 +36,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
  * @returns string
  */
 
-const capitalizeMessage: Function = (message: string): string => {
+const capitalizeMessage = (message: string): string => {
   return message.replace(/\b\w/g, (l) => l.toUpperCase());
 };

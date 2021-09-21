@@ -31,6 +31,8 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private server: Server;
 
+  private logger: Logger = new Logger('GlobalGateway');
+
   /**
    * Handler for general websocket connection
    *
@@ -39,8 +41,6 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns Promise<void>
    */
 
-  private logger: Logger = new Logger('GlobalGateway');
-
   async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
     const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');
     if (!token) client.error(new BadRequestException('Missing Token').getResponse());
@@ -48,14 +48,10 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const user: User = await this.authService.handleConnect(token);
       await new Promise((resolve) => {
-        user.chats.forEach(({ chatUuid }) => {
-          client.join(chatUuid, resolve);
-        });
+        user.chats.forEach(({ chatUuid }) => client.join(chatUuid, resolve));
       });
       const timesOnline: number = this.timesOnline(token);
-      if (timesOnline === 1) {
-        await this.emitToAllContacts(user, ChatEvent.MEMBER_ONLINE);
-      }
+      if (timesOnline === 1) await this.emitToAllContacts(user, ChatEvent.MEMBER_ONLINE);
       this.log(client, user, true);
     } catch (exception) {
       if (exception instanceof HttpException) client.error(exception.getResponse());
@@ -151,6 +147,18 @@ export class AuthGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     return online;
   }
+
+  /**
+   * Function to log a connection / disconnect
+   *
+   * @param client connected/disconnected socket
+   *
+   * @param user user of the socket
+   *
+   * @param connected boolean whether the socket connected or disconnected
+   *
+   * @returns void
+   */
 
   private log(client: Socket, user: User, connected: boolean): void {
     const token: string = client.handshake.headers.authorization?.replace('Bearer ', '');

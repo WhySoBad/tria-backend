@@ -12,7 +12,7 @@ import { JwtService } from './Jwt/Jwt.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService, private JwtService: JwtService) {}
+  constructor(private authService: AuthService) {}
 
   /**
    * Route to validate a jwt
@@ -46,11 +46,7 @@ export class AuthController {
     try {
       const user: User = await this.authService.handleLogin(credentials);
       return JwtService.GenerateToken(
-        {
-          uuid: v4(),
-          user: user.uuid,
-          type: TokenType.AUTH,
-        },
+        { uuid: v4(), user: user.uuid, type: TokenType.AUTH },
         TokenType.AUTH
       );
     } catch (exception) {

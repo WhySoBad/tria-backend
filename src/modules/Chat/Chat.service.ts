@@ -75,9 +75,7 @@ export class ChatService {
       return;
     });
 
-    if (existing.length != 0) {
-      throw new BadRequestException('Private Chat Already Exists');
-    }
+    if (existing.length != 0) throw new BadRequestException('Private Chat Already Exists');
 
     const chat: Chat = new Chat();
     const creator: ChatMember = new ChatMember();
@@ -228,9 +226,7 @@ export class ChatService {
   async handleJoin(chatUuid: string, payload: TokenPayload): Promise<void> {
     const chat: Chat | undefined = await this.getChat(chatUuid);
     if (!chat) throw new NotFoundException('Group Not Found');
-    if (chat.type == ChatType.PRIVATE) {
-      throw new BadRequestException('Chat Has To Be Group');
-    }
+    if (chat.type == ChatType.PRIVATE) throw new BadRequestException('Chat Has To Be Group');
 
     const banned: BannedMember | undefined = chat.banned.find((member: BannedMember) => {
       return member.userUuid == payload.user;
@@ -274,14 +270,11 @@ export class ChatService {
   async handleLeave(chatUuid: string, payload: TokenPayload): Promise<void> {
     const chat: Chat | undefined = await this.getChat(chatUuid);
     if (!chat) throw new NotFoundException('Group Not Found');
-    if (chat.type === ChatType.PRIVATE) {
-      throw new BadRequestException('Chat Has To Be Group');
-    }
+    if (chat.type === ChatType.PRIVATE) throw new BadRequestException('Chat Has To Be Group');
+
     const user: ChatMember | undefined = await this.getMember(chat, payload.user);
     if (!user) throw new NotFoundException('User Not Found');
-    if (user.role === GroupRole.OWNER) {
-      throw new BadRequestException("Owner Can't Leave The Group");
-    }
+    if (user.role === GroupRole.OWNER) throw new BadRequestException("Owner Can't Leave The Group");
 
     await this.leaveChat(chat, user);
   }
@@ -299,11 +292,13 @@ export class ChatService {
   async handleDelete(chatUuid: string, payload: TokenPayload): Promise<void> {
     const chat: Chat | undefined = await this.getChat(chatUuid);
     if (!chat) throw new NotFoundException('Chat Not Found');
+
     const user: ChatMember | undefined = await this.getMember(chat, payload.user);
     if (!user) throw new NotFoundException('User Not Found');
     if (chat.type !== ChatType.PRIVATE && user.role !== GroupRole.OWNER) {
       throw new UnauthorizedException('Only Owner Can Delete A Group');
     }
+
     await this.deleteChat(chat);
   }
 
@@ -312,23 +307,22 @@ export class ChatService {
    *
    * @param chatUuid chat uuid
    *
-   * @param uuid user uuid
-   *
-   * @param payload payload of user jwt
+   * @param userUuid user uuid
    *
    * @returns Promise<void>
    */
 
-  async handleBan(chatUuid: string, uuid: string, payload: TokenPayload): Promise<void> {
+  async handleBan(chatUuid: string, userUuid: string): Promise<void> {
     const chat: Chat | undefined = await this.getChat(chatUuid);
     if (!chat) throw new NotFoundException('Chat Not Found');
     if (chat.type == ChatType.PRIVATE) throw new BadRequestException('Chat Has To Be Group');
     const existing: BannedMember | undefined = await this.bannedMemberRepository.findOne({
-      userUuid: uuid,
+      userUuid: userUuid,
       chatUuid: chatUuid,
     });
     if (existing) throw new BadRequestException('User Is Already Banned');
-    const member: ChatMember | undefined = await this.getMember(chat, uuid);
+
+    const member: ChatMember | undefined = await this.getMember(chat, userUuid);
     if (!member) throw new NotFoundException('User Not Found');
     if (member.role === GroupRole.OWNER) throw new UnauthorizedException("Owner Can't Be Banned");
 
@@ -358,28 +352,28 @@ export class ChatService {
    *
    * @param chatUuid chat uuid
    *
-   * @param uuid user uuid
-   *
-   * @param payload payload of user jwt
+   * @param userUuid user uuid
    *
    * @returns Promise<void>
    */
 
-  async handleUnban(chatUuid: string, uuid: string, payload: TokenPayload): Promise<void> {
+  async handleUnban(chatUuid: string, userUuid: string): Promise<void> {
     const chat: Chat | undefined = await this.getChat(chatUuid);
     if (!chat) throw new NotFoundException('Chat Not Found');
     if (chat.type == ChatType.PRIVATE) throw new BadRequestException('Chat Has To Be Group');
     const existing: BannedMember | undefined = await this.bannedMemberRepository.findOne({
-      userUuid: uuid,
+      userUuid: userUuid,
       chatUuid: chatUuid,
     });
     if (!existing) throw new NotFoundException("User Isn't Banned");
+
     const member: BannedMember | undefined = chat.banned.find((member: BannedMember) => {
-      return member.userUuid == uuid;
+      return member.userUuid == userUuid;
     });
     if (!member) throw new NotFoundException('User Not Found');
+
     await this.bannedMemberRepository.remove(member);
-    this.chatGateway.handleMemberUnban(chat.uuid, uuid);
+    this.chatGateway.handleMemberUnban(chat.uuid, userUuid);
   }
 
   /**
@@ -387,20 +381,19 @@ export class ChatService {
    *
    * @param chatUuid chat uuid
    *
-   * @param uuid user uuid
-   *
-   * @param payload payload of user jwt
+   * @param userUuid user uuid
    *
    * @returns Promise<void>
    */
 
-  async handleKick(chatUuid: string, uuid: string, payload: TokenPayload): Promise<void> {
+  async handleKick(chatUuid: string, userUuid: string): Promise<void> {
     const chat: Chat | undefined = await this.getChat(chatUuid);
     if (!chat) throw new NotFoundException('Chat Not Found');
     if (chat.type == ChatType.PRIVATE) throw new BadRequestException('Chat Has To Be Group');
-    const member: ChatMember | undefined = await this.getMember(chat, uuid);
+    const member: ChatMember | undefined = await this.getMember(chat, userUuid);
     if (!member) throw new NotFoundException('User Not Found');
     if (member.role === GroupRole.OWNER) throw new UnauthorizedException("Owner Can't Be Kicked");
+
     await this.leaveChat(chat, member);
   }
 
@@ -456,6 +449,7 @@ export class ChatService {
       throw new BadRequestException('User Has Already Read Further');
     }
     member.lastRead = new Date(timestamp + 1000);
+
     await this.chatMemberRepository.save(member);
     await this.chatGateway.handleMessageRead(member.userUuid, member.chatUuid, member.lastRead);
   }
@@ -483,6 +477,7 @@ export class ChatService {
     message.text = text;
     await this.messageRepository.save(message);
     sender.lastRead = new Date();
+
     await this.chatMemberRepository.save(sender);
     return message;
   }
@@ -529,17 +524,14 @@ export class ChatService {
     if (description) chat.description = description;
     if (type) chat.type = ChatType[type];
 
-    await this.chatRepository.save({
-      ...chat,
-    });
-
+    await this.chatRepository.save({ ...chat });
     return chat;
   }
 
   /**
    * Function to handle message edits
    *
-   * @param data data to be changed [pinned, ...]
+   * @param data data to be changed [text, ...]
    *
    * @param payload payload of user jwt
    *
@@ -567,10 +559,8 @@ export class ChatService {
       message.edited += 1;
       message.editedAt = new Date();
     }
-    if (data.pinned != null) message.pinned = data.pinned;
 
     await this.messageRepository.save(message);
-
     return message;
   }
 
@@ -583,7 +573,7 @@ export class ChatService {
    *
    * @param payload payload of user jwt
    *
-   * @returns Promise<ChatMember | Array<ChatMember>> | ChatAdmin
+   * @returns Promise<ChatMember | Array<ChatMember>> | ChatAdmin>
    */
 
   async handleMemberEdit(
@@ -674,6 +664,7 @@ export class ChatService {
     if (!admin) throw new NotFoundException('Admin Not Found');
     await this.chatAdminRepository.remove(admin);
     member.role = GroupRole.MEMBER;
+
     await this.chatMemberRepository.save(member);
     return member;
   }
@@ -697,18 +688,12 @@ export class ChatService {
    *
    * @param file uploaded file
    *
-   * @param payload payload of user jwt
-   *
    * @param uuid uuid of the avatar
    *
    * @returns Promise<void>
    */
 
-  async handleAvatarUpload(
-    file: Express.Multer.File,
-    payload: TokenPayload,
-    uuid: string
-  ): Promise<void> {
+  async handleAvatarUpload(file: Express.Multer.File, uuid: string): Promise<void> {
     if (!file) throw new BadRequestException('Invalid File');
     const chat: Chat | undefined = await this.getChat(uuid);
     if (!chat) throw new NotFoundException('Chat Not Found');
@@ -846,7 +831,7 @@ export class ChatService {
   /**
    * Function to leave a chat
    *
-   * Important: Internal use only
+   * @important Internal use only
    *
    * @param chat chat
    *
@@ -873,7 +858,7 @@ export class ChatService {
   /**
    * Function to delete a chat
    *
-   * Important: Internal use only
+   * @important Internal use only
    *
    * @param chat chat
    *

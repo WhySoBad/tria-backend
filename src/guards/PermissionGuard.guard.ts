@@ -15,11 +15,7 @@ import { ChatService } from '../modules/Chat/Chat.service';
 
 @Injectable()
 class PermissionGuard implements CanActivate {
-  constructor(
-    private reflector: Reflector,
-    private jwtService: JwtService,
-    private chatService: ChatService
-  ) {}
+  constructor(private reflector: Reflector, private chatService: ChatService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request: Request = context.switchToHttp().getRequest();

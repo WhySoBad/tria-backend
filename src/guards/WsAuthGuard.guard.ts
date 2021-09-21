@@ -5,8 +5,6 @@ import { JwtService } from '../modules/Auth/Jwt/Jwt.service';
 
 @Injectable()
 class WsAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const socket: Socket = context.switchToHttp().getRequest();
     const token: string = socket.handshake.headers.authorization?.replace('Bearer ', '');
