@@ -200,17 +200,11 @@ export class UserService {
     if (!user) throw new NotFoundException('User Not Found');
 
     if (data.tag) {
-      const tagPending = await this.pendingUserRepository
-        .createQueryBuilder()
-        .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
-        .getOne();
-
       const tagExists = await this.userRepository
         .createQueryBuilder()
         .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
         .getOne();
-
-      if (tagExists || tagPending) throw new BadRequestException('Tag Has To Be Unique');
+      if (tagExists) throw new BadRequestException('Tag Has To Be Unique');
     }
 
     if (data.tag) user.tag = data.tag;
