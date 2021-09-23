@@ -202,7 +202,7 @@ export class UserService {
     if (data.tag) {
       const tagExists = await this.userRepository
         .createQueryBuilder()
-        .orWhere('LOWER(tag) = LOWER(:tag)', { tag: user.tag })
+        .where('LOWER(tag) = LOWER(:tag)', { tag: data.tag })
         .getOne();
       if (tagExists) throw new BadRequestException('Tag Has To Be Unique');
     }
